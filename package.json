@@ -4,5 +4,11 @@
   "main": "index.js",
   "repository": "https://github.com/gocreating/money-generator.git",
   "author": "gocreating <gocreating@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "crypto-js": "^4.0.0",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "ws": "^7.3.0"
+  }
 }
