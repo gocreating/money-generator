@@ -1,0 +1,8 @@
+{
+  "name": "money-generator",
+  "version": "0.1.0",
+  "main": "index.js",
+  "repository": "https://github.com/gocreating/money-generator.git",
+  "author": "gocreating <gocreating@gmail.com>",
+  "license": "MIT"
+}
