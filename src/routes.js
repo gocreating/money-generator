@@ -12,12 +12,11 @@ let user = {
   info: {},
   wallet: {
     funding: {
-      USD: {},
+      USD: {
+        balance: 0,
+        balanceAvailable: 0,
+      },
     },
-  },
-  balance: {
-    amount: 0,
-    amountAvailable: 0,
   },
 };
 
@@ -70,13 +69,14 @@ const registerReporter = () => {
   const intervalId = setInterval(() => {
     const { bids, asks } = orderBook;
     const highestBid = bids[0];
-    const highestBidRate = highestBid[2];
+    const highestBidRate = highestBid && highestBid[2];
     const lowestAsk = asks[0];
-    const lowestAskRate = lowestAsk[2];
+    const lowestAskRate = lowestAsk && lowestAsk[2];
     console.clear();
-    console.log('Balance: ', `${round(user.balance.amount, 2)} / ${round(user.balance.amountAvailable, 2)}`);
-    console.log('Highest Bid Rate:', highestBidRate, `(${round(highestBidRate * 365 * 100, 2)}% / year)`);
-    console.log('Lowest Ask Rate: ', lowestAskRate);
+    console.log('Funding Balance (USD):           ', `${round(user.wallet.funding.USD.balance, 2)}`);
+    console.log('Funding Balance Available (USD): ', `${round(user.wallet.funding.USD.balanceAvailable, 2)}`);
+    console.log('Highest Bid Rate:                ', highestBidRate, `(${round(highestBidRate * 365 * 100, 2)}% / year)`);
+    console.log('Lowest Ask Rate:                 ', lowestAskRate, `(${round(lowestAskRate * 365 * 100, 2)}% / year)`);
   }, 3000);
 
   return () => {
@@ -84,29 +84,29 @@ const registerReporter = () => {
   };
 };
 
+const updateUserWallet = (rawWallet) => {
+  const wallet = Wallet.unserialize(rawWallet);
+  if (wallet.type === 'funding' && wallet.currency === 'USD') {
+    user.wallet[wallet.type][wallet.currency].balance = wallet.balance;
+    user.wallet[wallet.type][wallet.currency].balanceAvailable = wallet.balanceAvailable;
+  }
+};
+
 const initialize = async (ws, authWS, rest) => {
   ws.open();
   authWS.open();
 
-  authWS.onBalanceInfoUpdate({}, (balanceInfo) => {
-    user.balance.amount = balanceInfo[0];
+  authWS.onWalletSnapshot({}, (wallets) => {
+    wallets.forEach(wallet => updateUserWallet(wallet));
+  });
+
+  authWS.onWalletUpdate({}, (wallet) => {
+    updateUserWallet(wallet);
   });
 
   try {
     const userInfo = await rest.userInfo();
-    const balanceAvailable = await rest._makeAuthRequest('/auth/calc/order/avail', {
-      symbol: 'fUSD',
-      type: 'FUNDING',
-    });
-    const wallets = await rest.wallets();
-    wallets.forEach(wallet => {
-      const parsedWallet = Wallet.unserialize(wallet);
-      if (parsedWallet.type === 'funding' && parsedWallet.currency === 'USD') {
-        user.wallet[parsedWallet.type][parsedWallet.currency] = parsedWallet;
-      }
-    });
     user.info = UserInfo.unserialize(userInfo);
-    user.balance.amountAvailable = balanceAvailable[0];
   } catch (e) {
     console.error('Fail to initialize.', e);
   }
@@ -129,7 +129,7 @@ const routes = async (app) => {
       type: 'LIMIT',
       symbol: 'fUSD',
       rate: 0.1,
-      amount: 120,
+      amount: 50,
       period: 2,
     }, rest);
 
