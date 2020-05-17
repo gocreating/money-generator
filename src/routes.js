@@ -93,8 +93,8 @@ const updateUserWallet = (rawWallet) => {
 };
 
 const initialize = async (ws, authWS, rest) => {
-  ws.open();
-  authWS.open();
+  await ws.open();
+  await authWS.open();
 
   authWS.onWalletSnapshot({}, (wallets) => {
     wallets.forEach(wallet => updateUserWallet(wallet));
@@ -102,6 +102,34 @@ const initialize = async (ws, authWS, rest) => {
 
   authWS.onWalletUpdate({}, (wallet) => {
     updateUserWallet(wallet);
+  });
+
+  authWS.onFundingOfferSnapshot({}, (fos) => {
+    console.log('==== fos ====');
+    fos.forEach(foSerialized => {
+      const fo = FundingOffer.unserialize(foSerialized);
+      console.log(`${fo.id},${fo.symbol},${fo.status},${fo.amount},${fo.amountOrig},${fo.rate},${fo.period},${fo.renew}`);
+    });
+  });
+
+  authWS.onFundingOfferNew({}, (fon) => {
+    console.log('==== fon ====');
+    const fo = FundingOffer.unserialize(fon);
+    const intervalId = setInterval(() => {
+      console.log(`${fo.id},${fo.symbol},${fo.status},${fo.amount},${fo.amountOrig},${fo.rate},${fo.period},${fo.renew}`);
+    }, 1000);
+
+    if (fo.amount === 50) {
+      setTimeout(async () => {
+        console.log('==== canceling ====');
+        const resOffer = await rest.cancelFundingOffer(fo.id);
+        if (resOffer.status === 'SUCCESS') {
+          const resFo = FundingOffer.unserialize(resOffer.notifyInfo);
+          console.log(`Offer ${resFo.id} cancelled`);
+        }
+        clearInterval(intervalId);
+      }, 5000);
+    }
   });
 
   try {
@@ -125,22 +153,27 @@ const routes = async (app) => {
   });
 
   app.get('/funding', async (req, res) => {
-    const fo = new FundingOffer({
+    const newFo = new FundingOffer({
       type: 'LIMIT',
       symbol: 'fUSD',
-      rate: 0.1,
+      rate: 0.002, // 0.2%
       amount: 50,
       period: 2,
     }, rest);
 
     try {
-      await fo.submit();
-      res.send({
+      const offerRes = await rest.submitFundingOffer(newFo);
+      const fo = FundingOffer.unserialize(offerRes.notifyInfo);
+
+      console.log('==== submit funding offer ====');
+      console.log(`${fo.id},${fo.symbol},${fo.status},${fo.amount},${fo.amountOrig},${fo.rate},${fo.period},${fo.renew}`);
+
+      res.json({
         msg: 'ok',
       });
     } catch (e) {
       const { response: { body } } = e;
-      res.status(422).send({
+      res.status(422).json({
         msg: body[2],
       });
     }
