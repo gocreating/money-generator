@@ -11,8 +11,9 @@ let orderBook = {
 };
 let user = {
   config: {
-    amountKeep: 110,
+    amountKeep: 126,
     amountMin: 50,
+    fixedOfferRate: 0.001, // 0.1% per day
   },
   info: {},
   wallet: {
@@ -125,8 +126,8 @@ const updateUserWallet = async (rawWallet, rest) => {
         const newFo = new FundingOffer({
           type: 'LIMIT',
           symbol: 'fUSD',
-          rate: 0.002, // 0.2%
-          amount: 50,
+          rate: user.config.fixedOfferRate,
+          amount: wallet.balanceAvailable - user.config.amountKeep,
           period: 2,
         }, rest);
         try {
