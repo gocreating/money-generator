@@ -10,6 +10,10 @@ let orderBook = {
   asks: [],
 };
 let user = {
+  config: {
+    amountKeep: 110,
+    amountMin: 50,
+  },
   info: {},
   wallet: {
     funding: {
@@ -20,6 +24,7 @@ let user = {
     },
   },
   fundingCreditMap: {},
+  fundingOfferMap: {},
 };
 
 const createBFXPublicWS = () => {
@@ -94,24 +99,62 @@ const registerReporter = () => {
       }
       console.log(`${fc.id}, ${fc.symbol}, ${fc.positionPair}, ${fc.status}, ${fc.type}, ${padStart(round(fc.amount, 2), 8)} (${round(fc.rate * 100, 5)}%), ${fc.period} days (${expStr})`);
     });
-  }, 3000);
+
+    console.log('\n=== Asking ===');
+    Object.keys(user.fundingOfferMap).map(offerId => {
+      const fo = user.fundingOfferMap[offerId];
+      console.log(`${fo.id}, ${fo.symbol}, ${fo.amount}, ${fo.rate}, ${fo.period}`);
+    });
+  }, 1000);
 
   return () => {
     clearInterval(intervalId);
   };
 };
 
-const updateUserWallet = (rawWallet) => {
+const updateUserWallet = async (rawWallet, rest) => {
   const wallet = Wallet.unserialize(rawWallet);
   if (wallet.type === 'funding' && wallet.currency === 'USD') {
     user.wallet[wallet.type][wallet.currency].balance = wallet.balance;
     user.wallet[wallet.type][wallet.currency].balanceAvailable = wallet.balanceAvailable;
+
+    const pendingOfferAmount = Object.keys(user.fundingOfferMap).reduce((sum, fo) => sum + fo.amount, 0);
+    if (wallet.balanceAvailable - user.config.amountKeep > user.config.amountMin) {
+      // if (pendingOfferAmount === 0) {
+        // 自動掛單
+        const newFo = new FundingOffer({
+          type: 'LIMIT',
+          symbol: 'fUSD',
+          rate: 0.002, // 0.2%
+          amount: 50,
+          period: 2,
+        }, rest);
+        try {
+          const foRes = await rest.submitFundingOffer(newFo);
+          const fo = FundingOffer.unserialize(foRes.notifyInfo);
+        } catch (e) {
+          console.log(e);
+        }
+      // }
+    }
   }
 };
 
 const updateUserFundingCredit = (fcArray) => {
   const fc = FundingCredit.unserialize(fcArray);
   user.fundingCreditMap[fc.id] = fc;
+  // 成交時移除掛單的cache
+  delete user.fundingOfferMap[fc.id];
+};
+
+const updateUserFundingOffer = (foArray) => {
+  const fo = FundingOffer.unserialize(foArray);
+  user.fundingOfferMap[fo.id] = fo;
+};
+
+const removeUserFundingOffer = (foArray) => {
+  const fo = FundingOffer.unserialize(foArray);
+  delete user.fundingOfferMap[fo.id];
 };
 
 const initialize = async (ws, authWS, rest) => {
@@ -119,16 +162,15 @@ const initialize = async (ws, authWS, rest) => {
   await authWS.open();
 
   authWS.onWalletSnapshot({}, (wallets) => {
-    wallets.forEach(wallet => updateUserWallet(wallet));
+    wallets.forEach(wallet => updateUserWallet(wallet, rest));
   });
 
   authWS.onWalletUpdate({}, (wallet) => {
-    updateUserWallet(wallet);
+    updateUserWallet(wallet, rest);
   });
 
   // 出價
   authWS.onFundingOfferSnapshot({}, (fos) => {
-    console.log('==== fos ====');
     fos.forEach(foSerialized => {
       const fo = FundingOffer.unserialize(foSerialized);
       console.log(`${fo.id},${fo.symbol},${fo.status},${fo.amount},${fo.amountOrig},${fo.rate},${fo.period},${fo.renew}`);
@@ -137,23 +179,27 @@ const initialize = async (ws, authWS, rest) => {
 
   // 新的出價掛單
   authWS.onFundingOfferNew({}, (fon) => {
-    console.log('==== fon ====');
-    const fo = FundingOffer.unserialize(fon);
-    const intervalId = setInterval(() => {
-      console.log(`${fo.id},${fo.symbol},${fo.status},${fo.amount},${fo.amountOrig},${fo.rate},${fo.period},${fo.renew}`);
-    }, 1000);
+    updateUserFundingOffer(fon);
 
-    if (fo.amount === 50) {
-      setTimeout(async () => {
-        console.log('==== canceling ====');
-        const resOffer = await rest.cancelFundingOffer(fo.id);
-        if (resOffer.status === 'SUCCESS') {
-          const resFo = FundingOffer.unserialize(resOffer.notifyInfo);
-          console.log(`Offer ${resFo.id} cancelled`);
-        }
-        clearInterval(intervalId);
-      }, 5000);
-    }
+    // const intervalId = setInterval(() => {
+    //   console.log(`${fo.id},${fo.symbol},${fo.status},${fo.amount},${fo.amountOrig},${fo.rate},${fo.period},${fo.renew}`);
+    // }, 1000);
+
+    // if (fo.amount === 50) {
+    //   setTimeout(async () => {
+    //     console.log('==== canceling ====');
+    //     const resOffer = await rest.cancelFundingOffer(fo.id);
+    //     if (resOffer.status === 'SUCCESS') {
+    //       const resFo = FundingOffer.unserialize(resOffer.notifyInfo);
+    //       console.log(`Offer ${resFo.id} cancelled`);
+    //     }
+    //     clearInterval(intervalId);
+    //   }, 5000);
+    // }
+  });
+
+  authWS.onFundingOfferClose({}, (foc) => {
+    removeUserFundingOffer(foc);
   });
 
   // 已提供
