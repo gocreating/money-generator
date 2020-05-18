@@ -1,8 +1,9 @@
 
 const BFX = require('bitfinex-api-node');
 const { WSv2, RESTv2 } = require('bitfinex-api-node');
-const { UserInfo, FundingOffer, Wallet } = require('bfx-api-node-models');
+const { UserInfo, FundingOffer, FundingCredit, Wallet } = require('bfx-api-node-models');
 const round = require('lodash/round');
+const padStart = require('lodash/padStart');
 
 let orderBook = {
   bids: [],
@@ -18,6 +19,7 @@ let user = {
       },
     },
   },
+  fundingCreditMap: {},
 };
 
 const createBFXPublicWS = () => {
@@ -77,6 +79,21 @@ const registerReporter = () => {
     console.log('Funding Balance Available (USD): ', `${round(user.wallet.funding.USD.balanceAvailable, 2)}`);
     console.log('Highest Bid Rate:                ', highestBidRate, `(${round(highestBidRate * 365 * 100, 2)}% / year)`);
     console.log('Lowest Ask Rate:                 ', lowestAskRate, `(${round(lowestAskRate * 365 * 100, 2)}% / year)`);
+
+    console.log('\n=== Offering ===');
+    Object.keys(user.fundingCreditMap).map(offerId => {
+      const fc = user.fundingCreditMap[offerId];
+      const now = new Date();
+      const expiringInHour = Math.floor((fc.mtsOpening + fc.period * 86400000 - now.getTime()) / 3600000);
+      const expiringInDay = Math.floor(expiringInHour / 24);
+      let expStr = '';
+      if (expiringInHour < 24) {
+        expStr = `${expiringInHour} hours left`;
+      } else {
+        expStr = `${expiringInDay} days left`;
+      }
+      console.log(`${fc.id}, ${fc.symbol}, ${fc.positionPair}, ${fc.status}, ${fc.type}, ${padStart(round(fc.amount, 2), 8)} (${round(fc.rate * 100, 5)}%), ${fc.period} days (${expStr})`);
+    });
   }, 3000);
 
   return () => {
@@ -92,6 +109,11 @@ const updateUserWallet = (rawWallet) => {
   }
 };
 
+const updateUserFundingCredit = (fcArray) => {
+  const fc = FundingCredit.unserialize(fcArray);
+  user.fundingCreditMap[fc.id] = fc;
+};
+
 const initialize = async (ws, authWS, rest) => {
   await ws.open();
   await authWS.open();
@@ -104,6 +126,7 @@ const initialize = async (ws, authWS, rest) => {
     updateUserWallet(wallet);
   });
 
+  // 出價
   authWS.onFundingOfferSnapshot({}, (fos) => {
     console.log('==== fos ====');
     fos.forEach(foSerialized => {
@@ -112,6 +135,7 @@ const initialize = async (ws, authWS, rest) => {
     });
   });
 
+  // 新的出價掛單
   authWS.onFundingOfferNew({}, (fon) => {
     console.log('==== fon ====');
     const fo = FundingOffer.unserialize(fon);
@@ -130,6 +154,17 @@ const initialize = async (ws, authWS, rest) => {
         clearInterval(intervalId);
       }, 5000);
     }
+  });
+
+  // 已提供
+  authWS.onFundingCreditSnapshot({}, (fcs) => {
+    user.fundingCredits = fcs.forEach(fcArray => {
+      updateUserFundingCredit(fcArray);
+    });
+  });
+
+  authWS.onFundingCreditUpdate({}, (fcu) => {
+    updateUserFundingCredit(fcu);
   });
 
   try {
