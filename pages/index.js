@@ -8,6 +8,9 @@ const HomePage = ({ router }) => {
   const [info, setInfo] = useState({});
 
   useEffect(() => {
+    if (!BITFINEX_API_KEY || !BITFINEX_API_SECRET) {
+      return;
+    }
     setStatus('connecting...');
     fetch(`http://localhost:3000/api/enable?BITFINEX_API_KEY=${BITFINEX_API_KEY}&BITFINEX_API_SECRET=${BITFINEX_API_SECRET}`)
       .then(results => results.json())
@@ -18,7 +21,7 @@ const HomePage = ({ router }) => {
           setStatus('error');
         }
       });
-  }, []);
+  }, [BITFINEX_API_KEY, BITFINEX_API_SECRET]);
 
   useInterval(() => {
     fetch(`http://localhost:3000/api/info`)
