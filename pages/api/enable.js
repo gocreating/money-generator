@@ -6,6 +6,7 @@ const { UserInfo, FundingOffer, FundingCredit, Wallet } = require('bfx-api-node-
 const round = require('lodash/round');
 const padStart = require('lodash/padStart');
 
+export let initialized = false;
 export let orderBook = {
   bids: [],
   asks: [],
@@ -179,7 +180,7 @@ const initialize = async (ws, authWS, rest) => {
   authWS.onFundingOfferSnapshot({}, (fos) => {
     fos.forEach(foSerialized => {
       const fo = FundingOffer.unserialize(foSerialized);
-      console.log(`${fo.id},${fo.symbol},${fo.status},${fo.amount},${fo.amountOrig},${fo.rate},${fo.period},${fo.renew}`);
+      // console.log(`${fo.id},${fo.symbol},${fo.status},${fo.amount},${fo.amountOrig},${fo.rate},${fo.period},${fo.renew}`);
     });
   });
 
@@ -230,6 +231,8 @@ const initialize = async (ws, authWS, rest) => {
   } catch (e) {
     console.error('Fail to initialize.', e);
   }
+
+  initialized = true;
 };
 
 export default async (req, res) => {
