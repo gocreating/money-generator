@@ -238,6 +238,10 @@ export default async (req, res) => {
   const rest = createBFXRest(req.query.BITFINEX_API_KEY, req.query.BITFINEX_API_SECRET);
   // const unregisterReporter = registerReporter();
 
-  await initialize(ws, authWS, rest);
-  res.json({ status: 'ok' });
+  try {
+    await initialize(ws, authWS, rest);
+    res.json({ status: 'ok' });
+  } catch (e) {
+    res.json({ status: 'error', e });
+  }
 };
