@@ -1,19 +1,21 @@
 
+import Router from 'next/router';
 const BFX = require('bitfinex-api-node');
 const { WSv2, RESTv2 } = require('bitfinex-api-node');
 const { UserInfo, FundingOffer, FundingCredit, Wallet } = require('bfx-api-node-models');
 const round = require('lodash/round');
 const padStart = require('lodash/padStart');
 
-let orderBook = {
+export let orderBook = {
   bids: [],
   asks: [],
 };
-let user = {
+
+export let user = {
   config: {
     amountKeep: 126,
     amountMin: 50,
-    fixedOfferRate: 0.001, // 0.1% per day
+    fixedOfferRate: 0.000979, // 0.099999% per day
   },
   info: {},
   wallet: {
@@ -49,11 +51,11 @@ const createBFXPublicWS = () => {
   return ws;
 };
 
-const createBFXAuthWS = () => {
+const createBFXAuthWS = (bitfinexAPIKey, bitfinexAPISecret) => {
   console.log('[BFX] Create Authenticated Websocket');
   const bfx = new BFX({
-    apiKey: process.env.BITFINEX_API_KEY,
-    apiSecret: process.env.BITFINEX_API_SECRET,
+    apiKey: bitfinexAPIKey,
+    apiSecret: bitfinexAPISecret,
   });
   const ws = bfx.ws();
 
@@ -63,11 +65,11 @@ const createBFXAuthWS = () => {
   return ws;
 };
 
-const createBFXRest = () => {
+const createBFXRest = (bitfinexAPIKey, bitfinexAPISecret) => {
   console.log('[BFX] Create REST');
   const rest = new RESTv2({
-    apiKey: process.env.BITFINEX_API_KEY,
-    apiSecret: process.env.BITFINEX_API_SECRET,
+    apiKey: bitfinexAPIKey,
+    apiSecret: bitfinexAPISecret,
   });
   return rest;
 };
@@ -144,6 +146,9 @@ const updateUserWallet = async (rawWallet, rest) => {
 const updateUserFundingCredit = (fcArray) => {
   const fc = FundingCredit.unserialize(fcArray);
   user.fundingCreditMap[fc.id] = fc;
+
+  // FIXME: 掛單成交時 user.fundingCreditMap 沒有成功插入新成交的 offer
+
   // 成交時移除掛單的cache
   delete user.fundingOfferMap[fc.id];
 };
@@ -214,6 +219,11 @@ const initialize = async (ws, authWS, rest) => {
     updateUserFundingCredit(fcu);
   });
 
+  authWS.onFundingTradeEntry({}, (fte) => {
+    console.log('==== fte ====');
+    console.log(fte);
+  });
+
   try {
     const userInfo = await rest.userInfo();
     user.info = UserInfo.unserialize(userInfo);
@@ -222,44 +232,12 @@ const initialize = async (ws, authWS, rest) => {
   }
 };
 
-const routes = async (app) => {
+export default async (req, res) => {
   const ws = createBFXPublicWS();
-  const authWS = createBFXAuthWS();
-  const rest = createBFXRest();
-  const unregisterReporter = registerReporter();
+  const authWS = createBFXAuthWS(req.query.BITFINEX_API_KEY, req.query.BITFINEX_API_SECRET);
+  const rest = createBFXRest(req.query.BITFINEX_API_KEY, req.query.BITFINEX_API_SECRET);
+  // const unregisterReporter = registerReporter();
 
   await initialize(ws, authWS, rest);
-
-  app.get('/me', async (req, res) => {
-    res.json(user);
-  });
-
-  app.get('/funding', async (req, res) => {
-    const newFo = new FundingOffer({
-      type: 'LIMIT',
-      symbol: 'fUSD',
-      rate: 0.002, // 0.2%
-      amount: 50,
-      period: 2,
-    }, rest);
-
-    try {
-      const offerRes = await rest.submitFundingOffer(newFo);
-      const fo = FundingOffer.unserialize(offerRes.notifyInfo);
-
-      console.log('==== submit funding offer ====');
-      console.log(`${fo.id},${fo.symbol},${fo.status},${fo.amount},${fo.amountOrig},${fo.rate},${fo.period},${fo.renew}`);
-
-      res.json({
-        msg: 'ok',
-      });
-    } catch (e) {
-      const { response: { body } } = e;
-      res.status(422).json({
-        msg: body[2],
-      });
-    }
-  });
+  res.json({ status: 'ok' });
 };
-
-module.exports = routes;

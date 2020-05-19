@@ -6,14 +6,17 @@
   "author": "gocreating <gocreating@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "start": "node src/index.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
   },
   "dependencies": {
     "bitfinex-api-node": "^4.0.13",
     "crypto-js": "^4.0.0",
-    "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "lodash": "^4.17.15",
-    "ws": "^7.3.0"
+    "next": "^9.4.1",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1"
   }
 }
