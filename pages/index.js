@@ -85,16 +85,88 @@ const HomePage = ({ router }) => {
           <tr>
             <th>User</th>
             <td>
-              <div>{`id: ${info.user.info.id}`}</div>
-              <div>{`email: ${info.user.info.email}`}</div>
-              <div>{`username: ${info.user.info.username}`}</div>
-              <div>{`timezone: ${info.user.info.timezone}`}</div>
+              <div>{`id: ${info.user.info?.id}`}</div>
+              <div>{`email: ${info.user.info?.email}`}</div>
+              <div>{`username: ${info.user.info?.username}`}</div>
+              <div>{`timezone: ${info.user.info?.timezone}`}</div>
             </td>
           </tr>
         </tbody>
       </table>
       <hr />
       <table>
+        <caption>Provided</caption>
+        <thead>
+          <tr>
+            <th>Offer ID</th>
+            <th>Symbol</th>
+            <th>Position Pair</th>
+            <th>Status</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Rate</th>
+            <th>Period</th>
+            <th>Expires</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.keys(info.user.fundingCreditMap || []).map(offerId => {
+            const fc = info.user.fundingCreditMap[offerId];
+            const now = new Date();
+            const expiringInHour = Math.floor((fc.mtsOpening + fc.period * 86400000 - now.getTime()) / 3600000);
+            const expiringInDay = Math.floor(expiringInHour / 24);
+            let expStr = '';
+            if (expiringInHour < 24) {
+              expStr = `${expiringInHour} hours`;
+            } else {
+              expStr = `${expiringInDay} days`;
+            }
+            return (
+              <tr key={offerId}>
+                <td>{fc.id}</td>
+                <td>{fc.symbol}</td>
+                <td>{fc.positionPair}</td>
+                <td>{fc.status}</td>
+                <td>{fc.type}</td>
+                <td>{round(fc.amount, 2)}</td>
+                <td>{`${round(fc.rate * 100, 5)}% (${round(fc.rate * 365 * 100, 1)}% annualized)`}</td>
+                <td>{`${fc.period} days`}</td>
+                <td>{`in ${expStr}`}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <hr />
+      <table>
+        <caption>{'Bids & Offers'}</caption>
+        <thead>
+          <tr>
+            <th>Offer ID</th>
+            <th>Symbol</th>
+            <th>Amount</th>
+            <th>Rate</th>
+            <th>Period</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.keys(info.user.fundingOfferMap || []).map(offerId => {
+            const fo = info.user.fundingOfferMap[offerId];
+            return (
+              <tr key={offerId}>
+                <td>{fo.id}</td>
+                <td>{fo.symbol}</td>
+                <td>{round(fo.amount, 2)}</td>
+                <td>{`${round(fo.rate * 100, 5)}% (${round(fo.rate * 365 * 100, 1)}% annualized)`}</td>
+                <td>{fo.period}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <hr />
+      <table>
+        <caption>{'Order Book'}</caption>
         <thead>
           <tr>
             <th colSpan={4}>Bid</th>
