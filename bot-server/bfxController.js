@@ -131,7 +131,7 @@ const updateUserFundingCredit = (fcArray) => {
 
 const updateUserFundingOffer = (foArray) => {
   const fo = FundingOffer.unserialize(foArray);
-  state.user.fundingOfferMap[fo.id] = fo;
+  setInState(['user', 'fundingOfferMap', fo.id], fo);
 };
 
 const removeUserFundingOffer = (foArray) => {
@@ -155,7 +155,7 @@ const initialize = async (ws, authWS, rest) => {
   authWS.onFundingOfferSnapshot({}, (fos) => {
     fos.forEach(foSerialized => {
       const fo = FundingOffer.unserialize(foSerialized);
-      // console.log(`${fo.id},${fo.symbol},${fo.status},${fo.amount},${fo.amountOrig},${fo.rate},${fo.period},${fo.renew}`);
+      updateUserFundingOffer(fo);
     });
   });
 
