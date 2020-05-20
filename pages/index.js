@@ -23,11 +23,13 @@ const HomePage = ({ router }) => {
       return;
     }
     if (connected) {
-
+      return;
+    }
+    if (status === 'error') {
       return;
     }
     setStatus('connecting...');
-    fetch(`http://localhost:${process.env.PORT}/api/connection?BITFINEX_API_KEY=${BITFINEX_API_KEY}&BITFINEX_API_SECRET=${BITFINEX_API_SECRET}`)
+    fetch(`${process.env.BOT_SERVER_HOST}/api/connect?BITFINEX_API_KEY=${BITFINEX_API_KEY}&BITFINEX_API_SECRET=${BITFINEX_API_SECRET}`)
       .then(results => results.json())
       .then(data => {
         if (data.status === 'ok') {
@@ -40,12 +42,12 @@ const HomePage = ({ router }) => {
   }, [connected, BITFINEX_API_KEY, BITFINEX_API_SECRET]);
 
   useInterval(() => {
-    fetch(`http://localhost:${process.env.PORT}/api/info`)
+    fetch(`${process.env.BOT_SERVER_HOST}/api/state`)
       .then(results => results.json())
       .then(data => {
         setInfo(data);
       });
-  }, refreshSecond * 1000);
+  }, refreshSecond ? refreshSecond * 1000 : null);
 
   return (
     <div>

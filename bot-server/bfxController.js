@@ -1,34 +1,9 @@
-
 const BFX = require('bitfinex-api-node');
 const { WSv2, RESTv2 } = require('bitfinex-api-node');
 const { UserInfo, FundingOffer, FundingCredit, Wallet } = require('bfx-api-node-models');
 const round = require('lodash/round');
 const padStart = require('lodash/padStart');
-
-export let connected = false;
-export let orderBook = {
-  bids: [],
-  asks: [],
-};
-
-export let user = {
-  config: {
-    amountKeep: 186,
-    amountMin: 50,
-    fixedOfferRate: 0.000979, // 0.099999% per day
-  },
-  info: {},
-  wallet: {
-    funding: {
-      USD: {
-        balance: 0,
-        balanceAvailable: 0,
-      },
-    },
-  },
-  fundingCreditMap: {},
-  fundingOfferMap: {},
-};
+const { getState, setState, setInState } = require('./state');
 
 const createBFXPublicWS = () => {
   console.log('[BFX] Create Public Websocket');
@@ -42,7 +17,7 @@ const createBFXPublicWS = () => {
       if (!book) {
         return;
       }
-      orderBook = book;
+      setState('orderBook', book);
     });
 
     ws.subscribeOrderBook('fUSD', 'R0', 25);
@@ -77,20 +52,20 @@ const createBFXRest = (bitfinexAPIKey, bitfinexAPISecret) => {
 const registerReporter = () => {
   console.log('[Server] Register reporter');
   const intervalId = setInterval(() => {
-    const { bids, asks } = orderBook;
+    const { bids, asks } = state.orderBook;
     const highestBid = bids[0];
     const highestBidRate = highestBid && highestBid[2];
     const lowestAsk = asks[0];
     const lowestAskRate = lowestAsk && lowestAsk[2];
     console.clear();
-    console.log('Funding Balance (USD):           ', `${round(user.wallet.funding.USD.balance, 2)}`);
-    console.log('Funding Balance Available (USD): ', `${round(user.wallet.funding.USD.balanceAvailable, 2)}`);
+    console.log('Funding Balance (USD):           ', `${round(state.user.wallet.funding.USD.balance, 2)}`);
+    console.log('Funding Balance Available (USD): ', `${round(state.user.wallet.funding.USD.balanceAvailable, 2)}`);
     console.log('Highest Bid Rate:                ', highestBidRate, `(${round(highestBidRate * 365 * 100, 2)}% / year)`);
     console.log('Lowest Ask Rate:                 ', lowestAskRate, `(${round(lowestAskRate * 365 * 100, 2)}% / year)`);
 
     console.log('\n=== Offering ===');
-    Object.keys(user.fundingCreditMap).map(offerId => {
-      const fc = user.fundingCreditMap[offerId];
+    Object.keys(state.user.fundingCreditMap).map(offerId => {
+      const fc = state.user.fundingCreditMap[offerId];
       const now = new Date();
       const expiringInHour = Math.floor((fc.mtsOpening + fc.period * 86400000 - now.getTime()) / 3600000);
       const expiringInDay = Math.floor(expiringInHour / 24);
@@ -104,8 +79,8 @@ const registerReporter = () => {
     });
 
     console.log('\n=== Asking ===');
-    Object.keys(user.fundingOfferMap).map(offerId => {
-      const fo = user.fundingOfferMap[offerId];
+    Object.keys(state.user.fundingOfferMap).map(offerId => {
+      const fo = state.user.fundingOfferMap[offerId];
       console.log(`${fo.id}, ${fo.symbol}, ${fo.amount}, ${fo.rate}, ${fo.period}`);
     });
   }, 1000);
@@ -115,21 +90,22 @@ const registerReporter = () => {
   };
 };
 
+
 const updateUserWallet = async (rawWallet, rest) => {
   const wallet = Wallet.unserialize(rawWallet);
   if (wallet.type === 'funding' && wallet.currency === 'USD') {
-    user.wallet[wallet.type][wallet.currency].balance = wallet.balance;
-    user.wallet[wallet.type][wallet.currency].balanceAvailable = wallet.balanceAvailable;
-
-    const pendingOfferAmount = Object.keys(user.fundingOfferMap).reduce((sum, fo) => sum + fo.amount, 0);
-    if (wallet.balanceAvailable - user.config.amountKeep > user.config.amountMin) {
+    setInState(['user', 'wallet', wallet.type, wallet.currency, 'balance'], wallet.balance);
+    setInState(['user', 'wallet', wallet.type, wallet.currency, 'balanceAvailable'], wallet.balanceAvailable);
+    const state = getState();
+    const pendingOfferAmount = Object.keys(state.user.fundingOfferMap).reduce((sum, fo) => sum + fo.amount, 0);
+    if (wallet.balanceAvailable - state.user.config.amountKeep > state.user.config.amountMin) {
       // if (pendingOfferAmount === 0) {
         // 自動掛單
         const newFo = new FundingOffer({
           type: 'LIMIT',
           symbol: 'fUSD',
-          rate: user.config.fixedOfferRate,
-          amount: wallet.balanceAvailable - user.config.amountKeep,
+          rate: state.user.config.fixedOfferRate,
+          amount: wallet.balanceAvailable - state.user.config.amountKeep,
           period: 2,
         }, rest);
         try {
@@ -145,22 +121,22 @@ const updateUserWallet = async (rawWallet, rest) => {
 
 const updateUserFundingCredit = (fcArray) => {
   const fc = FundingCredit.unserialize(fcArray);
-  user.fundingCreditMap[fc.id] = fc;
+  setInState(['user', 'fundingCreditMap', fc.id], fc);
 
   // FIXME: 掛單成交時 user.fundingCreditMap 沒有成功插入新成交的 offer
 
   // 成交時移除掛單的cache
-  delete user.fundingOfferMap[fc.id];
+  setInState(['user', 'fundingOfferMap', fc.id], undefined);
 };
 
 const updateUserFundingOffer = (foArray) => {
   const fo = FundingOffer.unserialize(foArray);
-  user.fundingOfferMap[fo.id] = fo;
+  state.user.fundingOfferMap[fo.id] = fo;
 };
 
 const removeUserFundingOffer = (foArray) => {
   const fo = FundingOffer.unserialize(foArray);
-  delete user.fundingOfferMap[fo.id];
+  setInState(['user', 'fundingOfferMap', fo.id], undefined);
 };
 
 const initialize = async (ws, authWS, rest) => {
@@ -210,7 +186,7 @@ const initialize = async (ws, authWS, rest) => {
 
   // 已提供
   authWS.onFundingCreditSnapshot({}, (fcs) => {
-    user.fundingCredits = fcs.forEach(fcArray => {
+    fcs.forEach(fcArray => {
       updateUserFundingCredit(fcArray);
     });
   });
@@ -367,24 +343,18 @@ const initialize = async (ws, authWS, rest) => {
 
   try {
     const userInfo = await rest.userInfo();
-    user.info = UserInfo.unserialize(userInfo);
+    setInState(['user', 'info'], UserInfo.unserialize(userInfo));
   } catch (e) {
     console.error('Fail to initialize.', e);
   }
 
-  connected = true;
+  setState('connected', true);
 };
 
-export default async (req, res) => {
-  const ws = createBFXPublicWS();
-  const authWS = createBFXAuthWS(req.query.BITFINEX_API_KEY, req.query.BITFINEX_API_SECRET);
-  const rest = createBFXRest(req.query.BITFINEX_API_KEY, req.query.BITFINEX_API_SECRET);
-  // const unregisterReporter = registerReporter();
-
-  try {
-    await initialize(ws, authWS, rest);
-    res.json({ status: 'ok' });
-  } catch (e) {
-    res.json({ status: 'error', e });
-  }
+module.exports = {
+  createBFXPublicWS,
+  createBFXAuthWS,
+  createBFXRest,
+  registerReporter,
+  initialize,
 };

@@ -1,5 +1,6 @@
 module.exports = {
   env: {
-    PORT: 7000
+    PORT: 3000,
+    BOT_SERVER_HOST: 'http://localhost:7000',
   },
 };
