@@ -1,12 +1,11 @@
 
-import Router from 'next/router';
 const BFX = require('bitfinex-api-node');
 const { WSv2, RESTv2 } = require('bitfinex-api-node');
 const { UserInfo, FundingOffer, FundingCredit, Wallet } = require('bfx-api-node-models');
 const round = require('lodash/round');
 const padStart = require('lodash/padStart');
 
-export let initialized = false;
+export let connected = false;
 export let orderBook = {
   bids: [],
   asks: [],
@@ -14,7 +13,7 @@ export let orderBook = {
 
 export let user = {
   config: {
-    amountKeep: 126,
+    amountKeep: 186,
     amountMin: 50,
     fixedOfferRate: 0.000979, // 0.099999% per day
   },
@@ -373,7 +372,7 @@ const initialize = async (ws, authWS, rest) => {
     console.error('Fail to initialize.', e);
   }
 
-  initialized = true;
+  connected = true;
 };
 
 export default async (req, res) => {

@@ -1,48 +1,114 @@
 import React, { useState, useEffect } from 'react';
 import { withRouter } from 'next/router';
+import round from 'lodash/round';
 import useInterval from '../hooks/useInterval';
 
 const HomePage = ({ router }) => {
   const { BITFINEX_API_KEY, BITFINEX_API_SECRET } = router.query;
   const [status, setStatus] = useState('idle');
-  const [info, setInfo] = useState({});
+  const [refreshSecond, setRefreshSecond] = useState(null);
+  const [info, setInfo] = useState({
+    connected: false,
+    orderBook: {
+      bids: [],
+      asks: [],
+    },
+    user: {},
+  });
+  const { connected, orderBook, user } = info;
 
   useEffect(() => {
     if (!BITFINEX_API_KEY || !BITFINEX_API_SECRET) {
       setStatus('idle');
       return;
     }
-    if (info.initialized) {
+    if (connected) {
+
       return;
     }
     setStatus('connecting...');
-    fetch(`http://localhost:3000/api/enable?BITFINEX_API_KEY=${BITFINEX_API_KEY}&BITFINEX_API_SECRET=${BITFINEX_API_SECRET}`)
+    fetch(`http://localhost:${process.env.PORT}/api/connection?BITFINEX_API_KEY=${BITFINEX_API_KEY}&BITFINEX_API_SECRET=${BITFINEX_API_SECRET}`)
       .then(results => results.json())
       .then(data => {
         if (data.status === 'ok') {
           setStatus('ready');
+          setRefreshSecond(2);
         } else if (data.status === 'error') {
           setStatus('error');
         }
       });
-  }, [info.initialized, BITFINEX_API_KEY, BITFINEX_API_SECRET]);
+  }, [connected, BITFINEX_API_KEY, BITFINEX_API_SECRET]);
 
   useInterval(() => {
-    fetch(`http://localhost:3000/api/info`)
+    fetch(`http://localhost:${process.env.PORT}/api/info`)
       .then(results => results.json())
       .then(data => {
         setInfo(data);
       });
-  }, 2000);
+  }, refreshSecond * 1000);
 
   return (
     <div>
-      <p>{`status: ${status}`}</p>
-      <p>{`initialized: ${info.initialized}`}</p>
-      <p>{BITFINEX_API_KEY}</p>
-      <p>{BITFINEX_API_SECRET}</p>
+      <table>
+        <tbody>
+          <tr>
+            <th>Dashboard Status</th>
+            <td>{status}</td>
+          </tr>
+          <tr>
+            <th>Refresh Interval</th>
+            <td>
+              {refreshSecond ? `Every ${refreshSecond} seconds` : 'waiting...'}
+            </td>
+          </tr>
+          <tr>
+            <th>API Key</th>
+            <td>{BITFINEX_API_KEY}</td>
+          </tr>
+          <tr>
+            <th>API Secret</th>
+            <td>{BITFINEX_API_SECRET}</td>
+          </tr>
+        </tbody>
+      </table>
       <hr />
-      {JSON.stringify(info)}
+      <table>
+        <thead>
+          <tr>
+            <th colSpan={4}>Bid</th>
+            <th colSpan={4}>Ask</th>
+          </tr>
+          <tr>
+            <td>ID</td>
+            <td>Period</td>
+            <td>Amount</td>
+            <td>Rate</td>
+
+            <td>Rate</td>
+            <td>Amount</td>
+            <td>Period</td>
+            <td>ID</td>
+          </tr>
+        </thead>
+        <tbody>
+          {orderBook.bids.map((bid, i) => {
+            const ask = orderBook.asks[i];
+            return (
+              <tr key={bid[0]}>
+                <td>{bid[0]}</td>
+                <td>{bid[1]}</td>
+                <td>{round(-bid[3], 1)}</td>
+                <td>{round(bid[2] * 100, 6)}%</td>
+
+                <td>{round(ask[2] * 100, 6)}%</td>
+                <td>{round(ask[3], 1)}</td>
+                <td>{ask[1]}</td>
+                <td>{ask[0]}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   )
 };

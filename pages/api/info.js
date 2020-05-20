@@ -1,8 +1,8 @@
-import { initialized, orderBook, user } from './enable';
+import { connected, orderBook, user } from './connection';
 
 export default (req, res) => {
   res.json({
-    initialized,
+    connected,
     orderBook,
     user,
   });
