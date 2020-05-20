@@ -49,6 +49,9 @@ const HomePage = ({ router }) => {
       });
   }, refreshSecond ? refreshSecond * 1000 : null);
 
+  const balance = round(info.user.wallet?.funding.USD.balance || 0, 2);
+  const balanceAvailable = round(info.user.wallet?.funding.USD.balanceAvailable || 0, 2);
+
   return (
     <div>
       <table>
@@ -70,6 +73,23 @@ const HomePage = ({ router }) => {
           <tr>
             <th>API Secret</th>
             <td>{BITFINEX_API_SECRET}</td>
+          </tr>
+          <tr>
+            <th>Total Founding Balance</th>
+            <td>{`${balance} USD (${round(balance * 30, 0)} TWD)`}</td>
+          </tr>
+          <tr>
+            <th>Available Founding Balance</th>
+            <td>{`${balanceAvailable} USD (${round(balanceAvailable * 30, 0)} TWD)`}</td>
+          </tr>
+          <tr>
+            <th>User</th>
+            <td>
+              <div>{`id: ${info.user.info.id}`}</div>
+              <div>{`email: ${info.user.info.email}`}</div>
+              <div>{`username: ${info.user.info.username}`}</div>
+              <div>{`timezone: ${info.user.info.timezone}`}</div>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -100,9 +120,15 @@ const HomePage = ({ router }) => {
                 <td>{bid[0]}</td>
                 <td>{bid[1]}</td>
                 <td>{round(-bid[3], 1)}</td>
-                <td>{round(bid[2] * 100, 6)}%</td>
+                <td>
+                  {`${round(bid[2] * 100, 6)}%`}
+                  {i === 0 && `(${round(bid[2] * 365 * 100, 1)}% annualized)`}
+                </td>
 
-                <td>{round(ask[2] * 100, 6)}%</td>
+                <td>
+                  {`${round(ask[2] * 100, 6)}%`}
+                  {i === 0 && `(${round(ask[2] * 365 * 100, 1)}% annualized)`}
+                </td>
                 <td>{round(ask[3], 1)}</td>
                 <td>{ask[1]}</td>
                 <td>{ask[0]}</td>

@@ -5,6 +5,9 @@
   "repository": "https://github.com/gocreating/money-generator.git",
   "author": "gocreating <gocreating@gmail.com>",
   "license": "MIT",
+  "nodemonConfig": {
+    "ignore": ["hooks/**/*", "pages/**/*", "public/**/*"]
+  },
   "scripts": {
     "start-bot": "node bot-server",
     "dev": "next dev",
