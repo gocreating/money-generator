@@ -97,6 +97,7 @@ const HomePage = ({ router }) => {
   const totalAskAmount = orderBook.asks.reduce((sum, ask) => sum + ask[3], 0);
   let accBidAmount = 0;
   let accAskAmount = 0;
+  const totalProvidedAmount = Object.values(info.user.fundingCreditMap || []).reduce((sum, fc) => sum + fc.amount, 0);
 
   return (
     <div>
@@ -130,7 +131,7 @@ const HomePage = ({ router }) => {
         </tbody>
       </table>
       <hr />
-      <table>
+      <Table>
         <caption>Provided</caption>
         <thead>
           <tr>
@@ -164,15 +165,22 @@ const HomePage = ({ router }) => {
                 <td>{fc.positionPair}</td>
                 <td>{fc.status}</td>
                 <td>{fc.type}</td>
-                <Td alignRight>{round(fc.amount, 2)}</Td>
-                <Td alignRight>{`${round(fc.rate * 100, 5).toFixed(5)}% (${round(fc.rate * 365 * 100, 1).toFixed(1)}% annualized)`}</Td>
+                <Td alignRight>{round(fc.amount, 2).toFixed(2)}</Td>
+                <Td
+                  alignRight
+                  percentage={fc.amount / totalProvidedAmount}
+                  percentageRight
+                  percentageRed
+                >
+                  {`${round(fc.rate * 100, 5).toFixed(5)}% (${round(fc.rate * 365 * 100, 1).toFixed(1)}% annualized)`}
+                </Td>
                 <td>{`${fc.period} days`}</td>
                 <Td alignRight>{`in ${expStr}`}</Td>
               </tr>
             );
           })}
         </tbody>
-      </table>
+      </Table>
       <hr />
       <table>
         <caption>{'Bids & Offers'}</caption>
