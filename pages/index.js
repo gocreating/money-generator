@@ -105,34 +105,34 @@ const HomePage = ({ router }) => {
         <caption>Account</caption>
         <tbody>
           <tr>
-            <td>ID</td>
+            <Th alignRight>ID</Th>
             <td>{info.user.info?.id}</td>
           </tr>
           <tr>
-            <td>email</td>
+            <Th alignRight>Email</Th>
             <td>{info.user.info?.email}</td>
           </tr>
           <tr>
-            <td>username</td>
+            <Th alignRight>Username</Th>
             <td>{info.user.info?.username}</td>
           </tr>
           <tr>
-            <td>timezone</td>
+            <Th alignRight>Timezone</Th>
             <td>{info.user.info?.timezone}</td>
           </tr>
           <tr>
-            <th>Total Founding Balance</th>
+            <Th alignRight>Total Founding Balance</Th>
             <td>{`${balance} USD (${round(balance * 30, 0)} TWD)`}</td>
           </tr>
           <tr>
-            <th>Available Founding Balance</th>
+            <Th alignRight>Available Founding Balance</Th>
             <td>{`${balanceAvailable} USD (${round(balanceAvailable * 30, 0)} TWD)`}</td>
           </tr>
         </tbody>
       </table>
       <hr />
       <Table>
-        <caption>Provided</caption>
+        <caption>{`Provided (${Object.keys(info.user.fundingCreditMap || []).length})`}</caption>
         <thead>
           <tr>
             <th>Offer ID</th>
@@ -142,7 +142,7 @@ const HomePage = ({ router }) => {
             <th>Type</th>
             <Th alignRight>Amount</Th>
             <Th alignRight>Rate</Th>
-            <th>Period</th>
+            <Th alignRight>Period</Th>
             <Th alignRight>Expires</Th>
           </tr>
         </thead>
@@ -174,7 +174,7 @@ const HomePage = ({ router }) => {
                 >
                   {`${round(fc.rate * 100, 5).toFixed(5)}% (${round(fc.rate * 365 * 100, 1).toFixed(1)}% annualized)`}
                 </Td>
-                <td>{`${fc.period} days`}</td>
+                <Td alignRight>{`${fc.period} days`}</Td>
                 <Td alignRight>{`in ${expStr}`}</Td>
               </tr>
             );
@@ -183,14 +183,14 @@ const HomePage = ({ router }) => {
       </Table>
       <hr />
       <table>
-        <caption>{'Bids & Offers'}</caption>
+        <caption>{`Bids & Offers (${Object.keys(info.user.fundingOfferMap || []).length})`}</caption>
         <thead>
           <tr>
             <th>Offer ID</th>
             <th>Symbol</th>
-            <th>Amount</th>
-            <th>Rate</th>
-            <th>Period</th>
+            <Th alignRight>Amount</Th>
+            <Th alignRight>Rate</Th>
+            <Th alignRight>Period</Th>
           </tr>
         </thead>
         <tbody>
@@ -200,12 +200,26 @@ const HomePage = ({ router }) => {
               <tr key={offerId}>
                 <td>{fo.id}</td>
                 <td>{fo.symbol}</td>
-                <td>{round(fo.amount, 2)}</td>
-                <td>{`${round(fo.rate * 100, 5)}% (${round(fo.rate * 365 * 100, 1)}% annualized)`}</td>
-                <td>{fo.period}</td>
+                <Td alignRight>{round(fo.amount, 2).toFixed(2)}</Td>
+                <Td alignRight>
+                  {`${round(fo.rate * 100, 5).toFixed(5)}% (${round(fo.rate * 365 * 100, 1).toFixed(1)}% annualized)`}
+                </Td>
+                <td>{`${fo.period} days`}</td>
               </tr>
             );
           })}
+        </tbody>
+      </table>
+      <hr />
+      <table>
+          <caption>Infer</caption>
+        <tbody>
+          <tr>
+            <th>Best Offer Rate</th>
+            <td>
+              {`${round(info.infer?.bestAskRate * 100, 5).toFixed(5)}% (${round(info.infer?.bestAskRate * 365 * 100, 1).toFixed(1)}% annualized)`}
+            </td>
+          </tr>
         </tbody>
       </table>
       <hr />
