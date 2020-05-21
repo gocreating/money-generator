@@ -6,7 +6,11 @@
   "author": "gocreating <gocreating@gmail.com>",
   "license": "MIT",
   "nodemonConfig": {
-    "ignore": ["hooks/**/*", "pages/**/*", "public/**/*"]
+    "ignore": [
+      "hooks/**/*",
+      "pages/**/*",
+      "public/**/*"
+    ]
   },
   "scripts": {
     "start-bot": "node bot-server",
@@ -22,6 +26,7 @@
     "lodash": "^4.17.15",
     "next": "^9.4.1",
     "react": "^16.13.1",
-    "react-dom": "^16.13.1"
+    "react-dom": "^16.13.1",
+    "styled-components": "^5.1.0"
   }
 }
