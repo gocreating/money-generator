@@ -12,15 +12,17 @@ const createBFXPublicWS = () => {
   });
 
   ws.on('open', () => {
-    ws.onOrderBook({ symbol: 'fUSD', prec: 'R0', len: 25 }, () => {
+    ws.onOrderBook({ symbol: 'fUSD', prec: 'R0', len: 100 }, () => {
       const book = ws.getOB('fUSD');
       if (!book) {
         return;
       }
-      setState('orderBook', book);
+      cuttedBook = cutBook(book, 25);
+      setState('orderBook', cuttedBook);
+      setInState(['infer', 'bestAskRate'], getBestAskRate(book));
     });
 
-    ws.subscribeOrderBook('fUSD', 'R0', 25);
+    ws.subscribeOrderBook('fUSD', 'R0', 100);
   });
 
   return ws;
@@ -90,6 +92,25 @@ const registerReporter = () => {
   };
 };
 
+const getBestAskRate = (book) => {
+  let maxAskAmount = 0;
+  let maxAskAmountIndex = -1;
+  for (let i = 1; i < book.asks.length; i++) {
+    const askAmount = book.asks[i][3];
+    if (askAmount > maxAskAmount) {
+      maxAskAmount = askAmount;
+      maxAskAmountIndex = i;
+    }
+  }
+  const bestAskIndex = Math.max(0, maxAskAmountIndex - 1);
+  const bestAsk = book.asks[bestAskIndex];
+  return bestAsk[2];
+};
+
+const cutBook = (book, length) => ({
+  bids: book.bids.slice(0, length),
+  asks: book.asks.slice(0, length),
+});
 
 const updateUserWallet = async (rawWallet, rest) => {
   const wallet = Wallet.unserialize(rawWallet);
@@ -97,24 +118,22 @@ const updateUserWallet = async (rawWallet, rest) => {
     setInState(['user', 'wallet', wallet.type, wallet.currency, 'balance'], wallet.balance);
     setInState(['user', 'wallet', wallet.type, wallet.currency, 'balanceAvailable'], wallet.balanceAvailable);
     const state = getState();
-    const pendingOfferAmount = Object.keys(state.user.fundingOfferMap).reduce((sum, fo) => sum + fo.amount, 0);
     if (wallet.balanceAvailable - state.user.config.amountKeep > state.user.config.amountMin) {
-      // if (pendingOfferAmount === 0) {
-        // 自動掛單
-        const newFo = new FundingOffer({
-          type: 'LIMIT',
-          symbol: 'fUSD',
-          rate: state.user.config.fixedOfferRate,
-          amount: wallet.balanceAvailable - state.user.config.amountKeep,
-          period: 2,
-        }, rest);
-        try {
-          const foRes = await rest.submitFundingOffer(newFo);
-          const fo = FundingOffer.unserialize(foRes.notifyInfo);
-        } catch (e) {
-          console.log(e);
-        }
-      // }
+      // 自動掛單
+      const offerableBalance = wallet.balanceAvailable - state.user.config.amountKeep;
+      const newFo = new FundingOffer({
+        type: 'LIMIT',
+        symbol: 'fUSD',
+        rate: state.infer.bestAskRate,
+        amount: Math.min(Math.max(offerableBalance, state.user.config.amountMin), state.user.config.amountMax),
+        period: 2,
+      }, rest);
+      try {
+        const foRes = await rest.submitFundingOffer(newFo);
+        const fo = FundingOffer.unserialize(foRes.notifyInfo);
+      } catch (e) {
+        console.log(e);
+      }
     }
   }
 };

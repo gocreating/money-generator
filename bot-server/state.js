@@ -4,10 +4,14 @@ const state = {
     bids: [],
     asks: [],
   },
+  infer: {
+    bestAskRate: null,
+  },
   user: {
     config: {
-      amountKeep: 186,
-      amountMin: 50,
+      amountKeep: 160,
+      amountMin: 250,
+      amountMax: 300,
       fixedOfferRate: 0.000979, // 0.099999% per day
     },
     info: {},
