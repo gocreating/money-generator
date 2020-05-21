@@ -122,11 +122,6 @@ const updateUserWallet = async (rawWallet, rest) => {
 const updateUserFundingCredit = (fcArray) => {
   const fc = FundingCredit.unserialize(fcArray);
   setInState(['user', 'fundingCreditMap', fc.id], fc);
-
-  // FIXME: 掛單成交時 user.fundingCreditMap 沒有成功插入新成交的 offer
-
-  // 成交時移除掛單的cache
-  setInState(['user', 'fundingOfferMap', fc.id], undefined);
 };
 
 const updateUserFundingOffer = (foArray) => {
@@ -137,6 +132,18 @@ const updateUserFundingOffer = (foArray) => {
 const removeUserFundingOffer = (foArray) => {
   const fo = FundingOffer.unserialize(foArray);
   setInState(['user', 'fundingOfferMap', fo.id], undefined);
+};
+
+const updateFundingTrade = async (ftArray, rest) => {
+  // 成交時不會有 funding snapshot，要手動更新 funding credits
+  try {
+    const fcs = await rest.fundingCredits('fUSD');
+    fcs.forEach(fcArray => {
+      updateUserFundingCredit(fcArray);
+    });
+  } catch (e) {
+    console.log(e);
+  }
 };
 
 const initialize = async (ws, authWS, rest) => {
@@ -180,6 +187,11 @@ const initialize = async (ws, authWS, rest) => {
     // }
   });
 
+  authWS.onFundingOfferUpdate({}, (fou) => {
+    updateUserFundingOffer(fou);
+  });
+
+  // Offer 取消/更新/成交時觸發
   authWS.onFundingOfferClose({}, (foc) => {
     removeUserFundingOffer(foc);
   });
@@ -195,150 +207,8 @@ const initialize = async (ws, authWS, rest) => {
     updateUserFundingCredit(fcu);
   });
 
-  authWS.onFundingTradeEntry({}, (fte) => {
-    console.log('==== fte ====');
-    console.log(fte);
-    // 在成交的瞬間會收到
-    /*
-
-    ==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-==== fte ====
-[ 154247846,
-  'fUSD',
-  1589908205000,
-  800830425,
-  500,
-  0.00077,
-  15,
-  null ]
-
-    ...
-     */
+  authWS.onFundingTradeUpdate({}, (ftu) => {
+    updateFundingTrade(ftu, rest);
   });
 
   try {
