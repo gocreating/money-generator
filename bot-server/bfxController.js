@@ -5,9 +5,13 @@ const round = require('lodash/round');
 const padStart = require('lodash/padStart');
 const { getState, setState, setInState } = require('./state');
 
+let cleanUpHandlerRegistered = false;
+let ws = null
+let authWS = null;
+
 const createBFXPublicWS = () => {
   console.log('[BFX] Create Public Websocket');
-  const ws = new WSv2({
+  ws = new WSv2({
     manageOrderBooks: true,
   });
 
@@ -34,12 +38,12 @@ const createBFXAuthWS = (bitfinexAPIKey, bitfinexAPISecret) => {
     apiKey: bitfinexAPIKey,
     apiSecret: bitfinexAPISecret,
   });
-  const ws = bfx.ws();
+  authWS = bfx.ws();
 
-  ws.on('error', (err) => console.log(err));
-  ws.on('open', ws.auth.bind(ws));
+  authWS.on('error', (err) => console.log(err));
+  authWS.on('open', authWS.auth.bind(authWS));
 
-  return ws;
+  return authWS;
 };
 
 const createBFXRest = (bitfinexAPIKey, bitfinexAPISecret) => {
@@ -142,6 +146,67 @@ const updateUserLedgers = async (rest) => {
   }
 };
 
+const tryToCloseWS = async () => {
+  if (ws !== null) {
+    try {
+      await ws.close();
+      ws = null;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+};
+
+const tryToCloseAuthWS = async () => {
+  if (authWS !== null) {
+    try {
+      await authWS.close();
+      authWS = null;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+};
+
+// https://stackoverflow.com/a/14032965/2443984
+const registerCleanUpHandler = () => {
+  if (cleanUpHandlerRegistered) {
+    return;
+  }
+  process.stdin.resume();
+
+  function exitHandler(options, exitCode) {
+    if (options.cleanup) {
+      tryToCloseWS();
+      tryToCloseAuthWS();
+      console.log('[BFX] Clean');
+    };
+    if (exitCode || exitCode === 0) {
+      tryToCloseWS();
+      tryToCloseAuthWS();
+      console.log(`[BFX] Exit with code: ${exitCode}`)
+    };
+    if (options.exit) {
+      process.exit();
+    }
+  }
+
+  //do something when app is closing
+  process.on('exit', exitHandler.bind(null,{cleanup:true}));
+
+  //catches ctrl+c event
+  process.on('SIGINT', exitHandler.bind(null, {exit:true}));
+
+  // catches "kill pid" (for example: nodemon restart)
+  process.on('SIGUSR1', exitHandler.bind(null, {exit:true}));
+  process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
+
+  //catches uncaught exceptions
+  process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
+
+  cleanUpHandlerRegistered = true;
+};
+
 const initialize = async (ws, authWS, rest) => {
   await ws.open();
   await authWS.open();
@@ -204,6 +269,8 @@ const initialize = async (ws, authWS, rest) => {
   } catch (e) {
     console.error('Fail to initialize.', e);
   }
+
+  registerCleanUpHandler(ws, authWS);
 
   setState('connected', true);
 };
