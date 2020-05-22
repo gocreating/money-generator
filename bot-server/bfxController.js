@@ -51,47 +51,6 @@ const createBFXRest = (bitfinexAPIKey, bitfinexAPISecret) => {
   return rest;
 };
 
-const registerReporter = () => {
-  console.log('[Server] Register reporter');
-  const intervalId = setInterval(() => {
-    const { bids, asks } = state.orderBook;
-    const highestBid = bids[0];
-    const highestBidRate = highestBid && highestBid[2];
-    const lowestAsk = asks[0];
-    const lowestAskRate = lowestAsk && lowestAsk[2];
-    console.clear();
-    console.log('Funding Balance (USD):           ', `${round(state.user.wallet.funding.USD.balance, 2)}`);
-    console.log('Funding Balance Available (USD): ', `${round(state.user.wallet.funding.USD.balanceAvailable, 2)}`);
-    console.log('Highest Bid Rate:                ', highestBidRate, `(${round(highestBidRate * 365 * 100, 2)}% / year)`);
-    console.log('Lowest Ask Rate:                 ', lowestAskRate, `(${round(lowestAskRate * 365 * 100, 2)}% / year)`);
-
-    console.log('\n=== Offering ===');
-    Object.keys(state.user.fundingCreditMap).map(offerId => {
-      const fc = state.user.fundingCreditMap[offerId];
-      const now = new Date();
-      const expiringInHour = Math.floor((fc.mtsOpening + fc.period * 86400000 - now.getTime()) / 3600000);
-      const expiringInDay = Math.floor(expiringInHour / 24);
-      let expStr = '';
-      if (expiringInHour < 24) {
-        expStr = `${expiringInHour} hours left`;
-      } else {
-        expStr = `${expiringInDay} days left`;
-      }
-      console.log(`${fc.id}, ${fc.symbol}, ${fc.positionPair}, ${fc.status}, ${fc.type}, ${padStart(round(fc.amount, 2), 8)} (${round(fc.rate * 100, 5)}%), ${fc.period} days (${expStr})`);
-    });
-
-    console.log('\n=== Asking ===');
-    Object.keys(state.user.fundingOfferMap).map(offerId => {
-      const fo = state.user.fundingOfferMap[offerId];
-      console.log(`${fo.id}, ${fo.symbol}, ${fo.amount}, ${fo.rate}, ${fo.period}`);
-    });
-  }, 1000);
-
-  return () => {
-    clearInterval(intervalId);
-  };
-};
-
 const getBestAskRate = (book) => {
   let maxAskAmount = 0;
   let maxAskAmountIndex = -1;
@@ -244,6 +203,5 @@ module.exports = {
   createBFXPublicWS,
   createBFXAuthWS,
   createBFXRest,
-  registerReporter,
   initialize,
 };

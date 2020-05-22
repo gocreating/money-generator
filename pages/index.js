@@ -191,6 +191,7 @@ const HomePage = ({ router }) => {
             <Th alignRight>Amount</Th>
             <Th alignRight>Rate</Th>
             <Th alignRight>Period</Th>
+            <th>Operation</th>
           </tr>
         </thead>
         <tbody>
@@ -205,6 +206,19 @@ const HomePage = ({ router }) => {
                   {`${round(fo.rate * 100, 5).toFixed(5)}% (${round(fo.rate * 365 * 100, 1).toFixed(1)}% annualized)`}
                 </Td>
                 <td>{`${fo.period} days`}</td>
+                <td>
+                  <button
+                    onClick={() => {
+                      fetch(`${process.env.BOT_SERVER_HOST}/api/offer/${fo.id}/close`, { method: 'POST' })
+                        .then(results => results.json())
+                        .then(data => {
+                          console.log('close offer:', data);
+                        });
+                    }}
+                  >
+                    Close
+                  </button>
+                </td>
               </tr>
             );
           })}
