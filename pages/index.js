@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import format from 'date-fns/format';
 import round from 'lodash/round';
 import useInterval from '../hooks/useInterval';
+import NoSsr from '../components/NoSsr';
 
 const Table = styled.table`
   border-collapse:collapse;
@@ -136,7 +137,7 @@ const HomePage = ({ router }) => {
   const fundingEarnings = (info.user.ledgers || []).reduce((sum, ledger) => sum + ledger.amount, 0);
 
   return (
-    <div>
+    <NoSsr>
       <Table>
         <caption>Account</caption>
         <tbody>
@@ -467,7 +468,7 @@ const HomePage = ({ router }) => {
           </tr>
         </tbody>
       </Table>
-    </div>
+    </NoSsr>
   )
 };
 
