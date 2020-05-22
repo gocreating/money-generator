@@ -76,8 +76,9 @@ const HomePage = ({ router }) => {
     },
     user: {},
   });
-  const { register, reset, handleSubmit } = useForm();
+  const { register, watch, reset, handleSubmit } = useForm();
   const { connected, orderBook, user } = info;
+  const watchedFixedOfferRate = watch('fixedOfferRate');
 
   useEffect(() => {
     if (!BITFINEX_API_KEY || !BITFINEX_API_SECRET) {
@@ -118,9 +119,7 @@ const HomePage = ({ router }) => {
       body: JSON.stringify(data),
     })
       .then(results => results.json())
-      .then(res => {
-        console.log('res', res);
-      });
+      .then(res => {});
   };
 
   const balance = round(info.user.wallet?.funding.USD.balance || 0, 2);
@@ -180,7 +179,7 @@ const HomePage = ({ router }) => {
         </thead>
         <tbody>
           <tr>
-            <Th alignRight>At least keep amount</Th>
+            <Th alignRight>At least keep amount (USD)</Th>
             <Td>{user.config?.amountKeep}</Td>
             <Td rowSpan={0}>
               <button
@@ -196,21 +195,47 @@ const HomePage = ({ router }) => {
             <Td><input name="amountKeep" type="number" ref={register} min={0} step={50} /></Td>
           </tr>
           <tr>
-            <Th alignRight>Min amount per order</Th>
+            <Th alignRight>Min amount per order (USD)</Th>
             <Td>{user.config?.amountMin}</Td>
             <Td><input name="amountMin" type="number" ref={register} min={50} step={50} /></Td>
           </tr>
           <tr>
-            <Th alignRight>Max amount per order</Th>
+            <Th alignRight>Max amount per order (USD)</Th>
             <Td>{user.config?.amountMax}</Td>
             <Td><input name="amountMax" type="number" ref={register} min={50} step={50} /></Td>
           </tr>
           <tr>
             <Th alignRight>Fix offer rate</Th>
             <Td>
-              {`${user.config?.fixedOfferRate} (${user.config?.fixedOfferRate * 100}%)`}
+              {
+                user.config?.enableFixedOfferRate
+                ? `${user.config?.fixedOfferRate} (${user.config?.fixedOfferRate * 100}%)`
+                : 'Disabled'
+              }
             </Td>
-            <Td><input name="fixedOfferRate" type="number" ref={register} /></Td>
+            <Td>
+              <input id="enableFixedOfferRate" name="enableFixedOfferRate" type="checkbox" ref={register} />
+              <label htmlFor="enableFixedOfferRate">Enable</label>
+              <br />
+              <input name="fixedOfferRate" type="number" ref={register} min={0.0} step={0.00001} />
+              {`${round(watchedFixedOfferRate * 100, 5).toFixed(5)}%`}
+            </Td>
+          </tr>
+          <tr>
+            <Th alignRight>Fix offer period (days)</Th>
+            <Td>
+              {
+                user.config?.enableFixedOfferPeriod
+                ? `${user.config?.fixedOfferPeriod}`
+                : 'Disabled'
+              }
+            </Td>
+            <Td>
+              <input id="enableFixedOfferPeriod" name="enableFixedOfferPeriod" type="checkbox" ref={register} />
+              <label htmlFor="enableFixedOfferPeriod">Enable</label>
+              <br />
+              <input name="fixedOfferPeriod" type="number" ref={register} min={2} max={30} />
+            </Td>
           </tr>
         </tbody>
         <tfoot>
