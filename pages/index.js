@@ -9,39 +9,42 @@ const Table = styled.table`
 `;
 
 const Th = styled.th`
+  position: relative;
   ${props => props.alignRight && css`
     text-align: right;
   `}
 `;
 
 const Td = styled.td`
+  position: relative;
   ${props => props.alignRight && css`
     text-align: right;
   `}
-  ${props => props.percentage && css`
-    position: relative;
+`;
 
-    ::after {
-      content: '';
-      width: ${props.percentage * 100}%;
-      display: block;
-      position: absolute;
-      top: 0px;
-      bottom: 0px;
-      z-index: -1;
+const ColorBar = styled.div.attrs(props => ({
+  style: {
+    width: `${props.percentage * 100}%`,
+  },
+}))`
+  display: block;
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  z-index: -1;
 
-      ${props.percentageRed && css`
-        background-color: rgb(252, 220, 222);
-      `}
-      ${props.percentageGreen && css`
-        background-color: rgb(210, 235, 220);
-      `}
-      ${props.percentageRight ? css`
-        right: 0px;
-      ` : css`
-        left: 0px;
-      `}
-    }
+  ${props => css`
+    ${props.green && css`
+      background-color: rgb(210, 235, 220);
+    `}
+    ${props.red && css`
+      background-color: rgb(252, 220, 222);
+    `}
+    ${props.percentageRight ? css`
+      right: 0px;
+    ` : css`
+      left: 0px;
+    `}
   `}
 `;
 
@@ -166,13 +169,13 @@ const HomePage = ({ router }) => {
                 <td>{fc.status}</td>
                 <td>{fc.type}</td>
                 <Td alignRight>{round(fc.amount, 2).toFixed(2)}</Td>
-                <Td
-                  alignRight
-                  percentage={fc.amount / totalProvidedAmount}
-                  percentageRight
-                  percentageRed
-                >
+                <Td alignRight>
                   {`${round(fc.rate * 100, 5).toFixed(5)}% (${round(fc.rate * 365 * 100, 1).toFixed(1)}% annualized)`}
+                  <ColorBar
+                    percentage={fc.amount / totalProvidedAmount}
+                    percentageRight
+                    red
+                  />
                 </Td>
                 <Td alignRight>{`${fc.period} days`}</Td>
                 <Td alignRight>{`in ${expStr}`}</Td>
@@ -269,22 +272,23 @@ const HomePage = ({ router }) => {
                 <Td alignRight>
                   {round(-bid[3], 1).toFixed(1)}
                 </Td>
-                <Td
-                  alignRight
-                  percentage={accBidAmount / (totalBidAmount + totalAskAmount)}
-                  percentageGreen
-                  percentageRight
-                >
+                <Td alignRight>
                   {i === 0 && `(${round(bid[2] * 365 * 100, 1)}% annualized)`}
                   {`${round(bid[2] * 100, 5).toFixed(5)}%`}
+                  <ColorBar
+                    percentage={accBidAmount / (totalBidAmount + totalAskAmount)}
+                    percentageRight
+                    green
+                  />
                 </Td>
 
-                <Td
-                  percentage={accAskAmount / (totalBidAmount + totalAskAmount)}
-                  percentageRed
-                >
+                <Td>
                   {`${round(ask[2] * 100, 5).toFixed(5)}%`}
                   {i === 0 && `(${round(ask[2] * 365 * 100, 1)}% annualized)`}
+                  <ColorBar
+                    percentage={accAskAmount / (totalBidAmount + totalAskAmount)}
+                    red
+                  />
                 </Td>
                 <Td alignRight>{round(ask[3], 1).toFixed(1)}</Td>
                 <Td alignRight>{ask[1]}</Td>
