@@ -6,10 +6,17 @@ import useInterval from '../hooks/useInterval';
 
 const Table = styled.table`
   border-collapse:collapse;
+
+  caption {
+    text-align: left;
+    font-size: 24px;
+    color: #777;
+  }
 `;
 
 const Th = styled.th`
   position: relative;
+  padding: 0px 8px;
   ${props => props.alignRight && css`
     text-align: right;
   `}
@@ -17,6 +24,7 @@ const Th = styled.th`
 
 const Td = styled.td`
   position: relative;
+  padding: 0px 8px;
   ${props => props.alignRight && css`
     text-align: right;
   `}
@@ -46,6 +54,11 @@ const ColorBar = styled.div.attrs(props => ({
       left: 0px;
     `}
   `}
+`;
+
+const Divider = styled.div`
+  width: 100%;
+  height: 32px;
 `;
 
 const HomePage = ({ router }) => {
@@ -101,100 +114,121 @@ const HomePage = ({ router }) => {
   let accBidAmount = 0;
   let accAskAmount = 0;
   const totalProvidedAmount = Object.values(info.user.fundingCreditMap || []).reduce((sum, fc) => sum + fc.amount, 0);
-
+  const dailyEarning = Object.keys(info.user.fundingCreditMap || []).reduce((sum, offerId) => {
+    const fc = info.user.fundingCreditMap[offerId];
+    return sum + fc.amount * fc.rate;
+  }, 0);
   return (
     <div>
-      <table>
+      <Table>
         <caption>Account</caption>
         <tbody>
           <tr>
             <Th alignRight>ID</Th>
-            <td>{info.user.info?.id}</td>
+            <Td>{info.user.info?.id}</Td>
           </tr>
           <tr>
             <Th alignRight>Email</Th>
-            <td>{info.user.info?.email}</td>
+            <Td>{info.user.info?.email}</Td>
           </tr>
           <tr>
             <Th alignRight>Username</Th>
-            <td>{info.user.info?.username}</td>
+            <Td>{info.user.info?.username}</Td>
           </tr>
           <tr>
             <Th alignRight>Timezone</Th>
-            <td>{info.user.info?.timezone}</td>
+            <Td>{info.user.info?.timezone}</Td>
           </tr>
           <tr>
             <Th alignRight>Total Founding Balance</Th>
-            <td>{`${balance} USD (${round(balance * 30, 0)} TWD)`}</td>
+            <Td>{`${balance} USD (${round(balance * 30, 0)} TWD)`}</Td>
           </tr>
           <tr>
             <Th alignRight>Available Founding Balance</Th>
-            <td>{`${balanceAvailable} USD (${round(balanceAvailable * 30, 0)} TWD)`}</td>
+            <Td>{`${balanceAvailable} USD (${round(balanceAvailable * 30, 0)} TWD)`}</Td>
           </tr>
         </tbody>
-      </table>
-      <hr />
+      </Table>
+      <Divider />
       <Table>
         <caption>{`Provided (${Object.keys(info.user.fundingCreditMap || []).length})`}</caption>
         <thead>
           <tr>
-            <th>Offer ID</th>
-            <th>Symbol</th>
-            <th>Position Pair</th>
-            <th>Status</th>
-            <th>Type</th>
+            <Th>Offer ID</Th>
+            <Th>Symbol</Th>
+            <Th>Position Pair</Th>
+            <Th>Status</Th>
+            <Th>Type</Th>
             <Th alignRight>Amount</Th>
             <Th alignRight>Rate</Th>
+            <Th alignRight>Annualized Rate</Th>
             <Th alignRight>Period</Th>
-            <Th alignRight>Expires</Th>
+            <Th alignRight>Expires in</Th>
           </tr>
         </thead>
         <tbody>
           {Object.keys(info.user.fundingCreditMap || []).map(offerId => {
             const fc = info.user.fundingCreditMap[offerId];
             const now = new Date();
-            const expiringInHour = Math.floor((fc.mtsOpening + fc.period * 86400000 - now.getTime()) / 3600000);
-            const expiringInDay = Math.floor(expiringInHour / 24);
+            const expiringInSecond = (fc.mtsOpening + fc.period * 86400000 - now.getTime()) / 1000;
+            const expiringInMinute = expiringInSecond / 60;
+            const expiringInHour = expiringInMinute / 60;
+            const expiringInDay = expiringInHour / 24;
             let expStr = '';
-            if (expiringInHour < 24) {
-              expStr = `${expiringInHour} hours`;
+            if (expiringInSecond < 60) {
+              expStr = `${Math.floor(expiringInSecond)} hours`;
+            } else if (expiringInMinute < 60) {
+              expStr = `${Math.floor(expiringInMinute)} minutes`;
+            } else if (expiringInHour < 48) {
+              expStr = `${Math.floor(expiringInHour)} hours`;
             } else {
-              expStr = `${expiringInDay} days`;
+              expStr = `${Math.floor(expiringInDay)} days`;
             }
             return (
               <tr key={offerId}>
-                <td>{fc.id}</td>
-                <td>{fc.symbol}</td>
-                <td>{fc.positionPair}</td>
-                <td>{fc.status}</td>
-                <td>{fc.type}</td>
+                <Td>{fc.id}</Td>
+                <Td>{fc.symbol}</Td>
+                <Td>{fc.positionPair}</Td>
+                <Td>{fc.status}</Td>
+                <Td>{fc.type}</Td>
                 <Td alignRight>{round(fc.amount, 2).toFixed(2)}</Td>
                 <Td alignRight>
-                  {`${round(fc.rate * 100, 5).toFixed(5)}% (${round(fc.rate * 365 * 100, 1).toFixed(1)}% annualized)`}
+                  {`${round(fc.rate * 100, 5).toFixed(5)}%`}
                   <ColorBar
                     percentage={fc.amount / totalProvidedAmount}
                     percentageRight
                     red
                   />
                 </Td>
+                <Td alignRight>
+                  {`${round(fc.rate * 365 * 100, 1).toFixed(1)}%`}
+                </Td>
                 <Td alignRight>{`${fc.period} days`}</Td>
-                <Td alignRight>{`in ${expStr}`}</Td>
+                <Td alignRight>{expStr}</Td>
               </tr>
             );
           })}
         </tbody>
+        <tfoot>
+          <tr>
+            <Th>Daily Earning</Th>
+            <Td colSpan={8}>
+              {`${round(dailyEarning, 2).toFixed(2)} USD (${round(dailyEarning * 30, 0)} TWD)`}
+            </Td>
+          </tr>
+        </tfoot>
       </Table>
-      <hr />
-      <table>
+      <Divider />
+      <Table>
         <caption>{`Bids & Offers (${Object.keys(info.user.fundingOfferMap || []).length})`}</caption>
         <thead>
           <tr>
-            <th>Offer ID</th>
-            <th>Symbol</th>
+            <Th>Offer ID</Th>
+            <Th>Symbol</Th>
             <Th alignRight>Amount</Th>
             <Th alignRight>Rate</Th>
             <Th alignRight>Period</Th>
-            <th>Operation</th>
+            <Th>Operation</Th>
           </tr>
         </thead>
         <tbody>
@@ -202,14 +236,14 @@ const HomePage = ({ router }) => {
             const fo = info.user.fundingOfferMap[offerId];
             return (
               <tr key={offerId}>
-                <td>{fo.id}</td>
-                <td>{fo.symbol}</td>
+                <Td>{fo.id}</Td>
+                <Td>{fo.symbol}</Td>
                 <Td alignRight>{round(fo.amount, 2).toFixed(2)}</Td>
                 <Td alignRight>
                   {`${round(fo.rate * 100, 5).toFixed(5)}% (${round(fo.rate * 365 * 100, 1).toFixed(1)}% annualized)`}
                 </Td>
-                <td>{`${fo.period} days`}</td>
-                <td>
+                <Td>{`${fo.period} days`}</Td>
+                <Td>
                   <button
                     onClick={() => {
                       fetch(`${process.env.BOT_SERVER_HOST}/api/offer/${fo.id}/close`, { method: 'POST' })
@@ -221,42 +255,42 @@ const HomePage = ({ router }) => {
                   >
                     Close
                   </button>
-                </td>
+                </Td>
               </tr>
             );
           })}
         </tbody>
-      </table>
-      <hr />
-      <table>
+      </Table>
+      <Divider />
+      <Table>
           <caption>Infer</caption>
         <tbody>
           <tr>
-            <th>Best Offer Rate</th>
-            <td>
+            <Th>Best Offer Rate</Th>
+            <Td>
               {`${round(info.infer?.bestAskRate * 100, 5).toFixed(5)}% (${round(info.infer?.bestAskRate * 365 * 100, 1).toFixed(1)}% annualized)`}
-            </td>
+            </Td>
           </tr>
         </tbody>
-      </table>
-      <hr />
+      </Table>
+      <Divider />
       <Table>
         <caption>{'Order Book'}</caption>
         <thead>
           <tr>
-            <th colSpan={4}>Bid</th>
-            <th colSpan={4}>Ask</th>
+            <Th colSpan={4}>Bid</Th>
+            <Th colSpan={4}>Ask</Th>
           </tr>
           <tr>
-            <td>ID</td>
+            <Td>ID</Td>
             <Td alignRight>Period</Td>
             <Td alignRight>Amount</Td>
             <Td alignRight>Rate</Td>
 
-            <td>Rate</td>
-            <td>Amount</td>
+            <Td>Rate</Td>
+            <Td>Amount</Td>
             <Td alignRight>Period</Td>
-            <td>ID</td>
+            <Td>ID</Td>
           </tr>
         </thead>
         <tbody>
@@ -267,7 +301,7 @@ const HomePage = ({ router }) => {
 
             return (
               <tr key={bid[0]}>
-                <td>{bid[0]}</td>
+                <Td>{bid[0]}</Td>
                 <Td alignRight>{bid[1]}</Td>
                 <Td alignRight>
                   {round(-bid[3], 1).toFixed(1)}
@@ -292,36 +326,36 @@ const HomePage = ({ router }) => {
                 </Td>
                 <Td alignRight>{round(ask[3], 1).toFixed(1)}</Td>
                 <Td alignRight>{ask[1]}</Td>
-                <td>{ask[0]}</td>
+                <Td>{ask[0]}</Td>
               </tr>
             );
           })}
         </tbody>
       </Table>
-      <hr />
-      <table>
+      <Divider />
+      <Table>
         <caption>Monitor Dashboard</caption>
         <tbody>
           <tr>
-            <th>Bitfinex API Connection Status</th>
-            <td>{status}</td>
+            <Th alignRight>Bitfinex API Connection Status</Th>
+            <Td>{status}</Td>
           </tr>
           <tr>
-            <th>Refresh Interval</th>
-            <td>
+            <Th alignRight>Refresh Interval</Th>
+            <Td>
               {refreshSecond ? `Every ${refreshSecond} seconds` : 'waiting...'}
-            </td>
+            </Td>
           </tr>
           <tr>
-            <th>API Key</th>
-            <td>{BITFINEX_API_KEY}</td>
+            <Th alignRight>API Key</Th>
+            <Td>{BITFINEX_API_KEY}</Td>
           </tr>
           <tr>
-            <th>API Secret</th>
-            <td>{BITFINEX_API_SECRET}</td>
+            <Th alignRight>API Secret</Th>
+            <Td>{BITFINEX_API_SECRET}</Td>
           </tr>
         </tbody>
-      </table>
+      </Table>
     </div>
   )
 };
