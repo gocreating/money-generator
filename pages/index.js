@@ -119,7 +119,9 @@ const HomePage = ({ router }) => {
       body: JSON.stringify(data),
     })
       .then(results => results.json())
-      .then(res => {});
+      .then(res => {
+        console.log('update config:', res);
+      });
   };
 
   const balance = round(info.user.wallet?.funding.USD.balance || 0, 2);
@@ -169,18 +171,10 @@ const HomePage = ({ router }) => {
       <Divider />
       <Table>
         <caption>Bot Configuration</caption>
-        <thead>
+        <tbody>
           <tr>
             <Th></Th>
             <Th alignRight>Current</Th>
-            <Th />
-            <Th>Edit</Th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <Th alignRight>At least keep amount (USD)</Th>
-            <Td>{user.config?.amountKeep}</Td>
             <Td rowSpan={0}>
               <button
                 onClick={() => {
@@ -192,6 +186,19 @@ const HomePage = ({ router }) => {
                 →→→→→→→→→→→→
               </button>
             </Td>
+            <Th>Edit</Th>
+          </tr>
+          <tr>
+            <Th alignRight>Enable Bot</Th>
+            <Td>{user.config?.enableBot ? 'Enabled' : 'Disabled'}</Td>
+            <Td>
+              <input id="enableBot" name="enableBot" type="checkbox" ref={register} />
+              <label htmlFor="enableBot">Enable</label>
+            </Td>
+          </tr>
+          <tr>
+            <Th alignRight>At least keep amount (USD)</Th>
+            <Td>{user.config?.amountKeep}</Td>
             <Td><input name="amountKeep" type="number" ref={register} min={0} step={50} /></Td>
           </tr>
           <tr>
@@ -245,6 +252,49 @@ const HomePage = ({ router }) => {
             </Td>
           </tr>
         </tfoot>
+      </Table>
+      <Divider />
+      <Table>
+        <caption>{`Bids & Offers (${Object.keys(info.user.fundingOfferMap || []).length})`}</caption>
+        <thead>
+          <tr>
+            <Th>Offer ID</Th>
+            <Th>Symbol</Th>
+            <Th alignRight>Amount</Th>
+            <Th alignRight>Rate</Th>
+            <Th alignRight>Period</Th>
+            <Th>Operation</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.keys(info.user.fundingOfferMap || []).map(offerId => {
+            const fo = info.user.fundingOfferMap[offerId];
+            return (
+              <tr key={offerId}>
+                <Td>{fo.id}</Td>
+                <Td>{fo.symbol}</Td>
+                <Td alignRight>{round(fo.amount, 2).toFixed(2)}</Td>
+                <Td alignRight>
+                  {`${round(fo.rate * 100, 5).toFixed(5)}% (${round(fo.rate * 365 * 100, 1).toFixed(1)}% annualized)`}
+                </Td>
+                <Td>{`${fo.period} days`}</Td>
+                <Td>
+                  <button
+                    onClick={() => {
+                      fetch(`${process.env.BOT_SERVER_HOST}/api/offer/${fo.id}/close`, { method: 'POST' })
+                        .then(results => results.json())
+                        .then(data => {
+                          console.log('close offer:', data);
+                        });
+                    }}
+                  >
+                    Close
+                  </button>
+                </Td>
+              </tr>
+            );
+          })}
+        </tbody>
       </Table>
       <Divider />
       <Table>
@@ -314,49 +364,6 @@ const HomePage = ({ router }) => {
             </Td>
           </tr>
         </tfoot>
-      </Table>
-      <Divider />
-      <Table>
-        <caption>{`Bids & Offers (${Object.keys(info.user.fundingOfferMap || []).length})`}</caption>
-        <thead>
-          <tr>
-            <Th>Offer ID</Th>
-            <Th>Symbol</Th>
-            <Th alignRight>Amount</Th>
-            <Th alignRight>Rate</Th>
-            <Th alignRight>Period</Th>
-            <Th>Operation</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.keys(info.user.fundingOfferMap || []).map(offerId => {
-            const fo = info.user.fundingOfferMap[offerId];
-            return (
-              <tr key={offerId}>
-                <Td>{fo.id}</Td>
-                <Td>{fo.symbol}</Td>
-                <Td alignRight>{round(fo.amount, 2).toFixed(2)}</Td>
-                <Td alignRight>
-                  {`${round(fo.rate * 100, 5).toFixed(5)}% (${round(fo.rate * 365 * 100, 1).toFixed(1)}% annualized)`}
-                </Td>
-                <Td>{`${fo.period} days`}</Td>
-                <Td>
-                  <button
-                    onClick={() => {
-                      fetch(`${process.env.BOT_SERVER_HOST}/api/offer/${fo.id}/close`, { method: 'POST' })
-                        .then(results => results.json())
-                        .then(data => {
-                          console.log('close offer:', data);
-                        });
-                    }}
-                  >
-                    Close
-                  </button>
-                </Td>
-              </tr>
-            );
-          })}
-        </tbody>
       </Table>
       <Divider />
       <Table>

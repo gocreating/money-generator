@@ -9,13 +9,14 @@ const state = {
   },
   user: {
     config: {
+      enableBot: false,
       amountKeep: 160,
       amountMin: 250,
       amountMax: 300,
       enableFixedOfferRate: false,
       fixedOfferRate: null,
-      enableFixedOfferPeriod: false,
-      fixedOfferPeriod: null,
+      enableFixedOfferPeriod: true,
+      fixedOfferPeriod: 2,
     },
     info: {},
     wallet: {

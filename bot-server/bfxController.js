@@ -8,6 +8,7 @@ const { getState, setState, setInState } = require('./state');
 let cleanUpHandlerRegistered = false;
 let ws = null
 let authWS = null;
+let rest = null;
 
 const createBFXPublicWS = () => {
   console.log('[BFX] Create Public Websocket');
@@ -48,7 +49,7 @@ const createBFXAuthWS = (bitfinexAPIKey, bitfinexAPISecret) => {
 
 const createBFXRest = (bitfinexAPIKey, bitfinexAPISecret) => {
   console.log('[BFX] Create REST');
-  const rest = new RESTv2({
+  rest = new RESTv2({
     apiKey: bitfinexAPIKey,
     apiSecret: bitfinexAPISecret,
   });
@@ -75,29 +76,58 @@ const cutBook = (book, length) => ({
   asks: book.asks.slice(0, length),
 });
 
+// 自動掛單
+const autoOffer = async () => {
+  const state = getState();
+  const { wallet, config } = state.user;
+
+  if (!config.enableBot) {
+    return;
+  }
+  if (wallet.funding.USD.balanceAvailable - config.amountKeep < config.amountMin) {
+    return;
+  }
+
+  const offerableBalance = wallet.funding.USD.balanceAvailable - config.amountKeep;
+  let offerRate;
+  if (config.enableFixedOfferRate) {
+    offerRate = config.fixedOfferRate;
+  }
+  if (typeof offerRate !== 'number' || offerRate <= 0) {
+    offerRate = state.infer.bestAskRate;
+  }
+  let offerPeriod;
+  if (config.enableFixedOfferPeriod) {
+    offerPeriod = config.fixedOfferPeriod;
+  }
+  if (typeof offerPeriod !== 'number' || offerPeriod <= 0) {
+    offerPeriod = 2;
+  }
+  let offerAmount = Math.min(Math.max(offerableBalance, config.amountMin), config.amountMax);
+
+  const newFo = new FundingOffer({
+    type: 'LIMIT',
+    symbol: 'fUSD',
+    rate: offerRate,
+    amount: offerAmount,
+    period: offerPeriod,
+  }, rest);
+  try {
+    const foRes = await rest.submitFundingOffer(newFo);
+    const fo = FundingOffer.unserialize(foRes.notifyInfo);
+    console.log('[BFX] Auto offer:');
+    console.log(fo);
+  } catch (e) {
+    console.log(e);
+  }
+};
+
 const updateUserWallet = async (rawWallet, rest) => {
   const wallet = Wallet.unserialize(rawWallet);
   if (wallet.type === 'funding' && wallet.currency === 'USD') {
     setInState(['user', 'wallet', wallet.type, wallet.currency, 'balance'], wallet.balance);
     setInState(['user', 'wallet', wallet.type, wallet.currency, 'balanceAvailable'], wallet.balanceAvailable);
-    const state = getState();
-    if (wallet.balanceAvailable - state.user.config.amountKeep > state.user.config.amountMin) {
-      // 自動掛單
-      const offerableBalance = wallet.balanceAvailable - state.user.config.amountKeep;
-      const newFo = new FundingOffer({
-        type: 'LIMIT',
-        symbol: 'fUSD',
-        rate: state.infer.bestAskRate,
-        amount: Math.min(Math.max(offerableBalance, state.user.config.amountMin), state.user.config.amountMax),
-        period: 2,
-      }, rest);
-      try {
-        const foRes = await rest.submitFundingOffer(newFo);
-        const fo = FundingOffer.unserialize(foRes.notifyInfo);
-      } catch (e) {
-        console.log(e);
-      }
-    }
+    await autoOffer();
   }
 };
 
@@ -208,6 +238,14 @@ const registerCleanUpHandler = () => {
 };
 
 const initialize = async (ws, authWS, rest) => {
+  try {
+    const userInfo = await rest.userInfo();
+    setInState(['user', 'info'], UserInfo.unserialize(userInfo));
+    console.log('[BFX] user info fetched');
+  } catch (e) {
+    console.error('Fail to initialize.', e);
+  }
+
   await ws.open();
   await authWS.open();
 
@@ -262,14 +300,6 @@ const initialize = async (ws, authWS, rest) => {
     updateUserLedgers(rest);
   }, 10 * 3600 * 1000);
 
-  try {
-    const userInfo = await rest.userInfo();
-    setInState(['user', 'info'], UserInfo.unserialize(userInfo));
-    console.log('[BFX] user info fetched');
-  } catch (e) {
-    console.error('Fail to initialize.', e);
-  }
-
   registerCleanUpHandler(ws, authWS);
 
   setState('connected', true);
@@ -280,4 +310,5 @@ module.exports = {
   createBFXAuthWS,
   createBFXRest,
   initialize,
+  autoOffer,
 };

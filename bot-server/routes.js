@@ -1,4 +1,10 @@
-const { createBFXPublicWS, createBFXAuthWS, createBFXRest, initialize } = require('./bfxController');
+const {
+  createBFXPublicWS,
+  createBFXAuthWS,
+  createBFXRest,
+  initialize,
+  autoOffer,
+} = require('./bfxController');
 const { getState, setInState } = require('./state');
 
 module.exports = (app) => {
@@ -10,9 +16,9 @@ module.exports = (app) => {
 
   app.get('/api/connect', async (req, res) => {
     const { BITFINEX_API_KEY, BITFINEX_API_SECRET } = req.query;
+    rest = createBFXRest(BITFINEX_API_KEY, BITFINEX_API_SECRET);
     const ws = createBFXPublicWS();
     const authWS = createBFXAuthWS(BITFINEX_API_KEY, BITFINEX_API_SECRET);
-    rest = createBFXRest(BITFINEX_API_KEY, BITFINEX_API_SECRET);
 
     try {
       await initialize(ws, authWS, rest);
@@ -37,7 +43,17 @@ module.exports = (app) => {
   });
 
   app.patch('/api/state/user/config', (req, res) => {
-    setInState(['user', 'config'], req.body);
+    const userConfig = {
+      ...req.body,
+      amountKeep: parseFloat(req.body.amountKeep),
+      amountMin: parseFloat(req.body.amountMin),
+      amountMax: parseFloat(req.body.amountMax),
+      fixedOfferRate: parseFloat(req.body.fixedOfferRate),
+      fixedOfferPeriod: parseInt(req.body.fixedOfferPeriod),
+    };
+    setInState(['user', 'config'], userConfig);
+    // trigger bot when config is updated
+    autoOffer();
     res.json({ status: 'ok' });
   });
 };
