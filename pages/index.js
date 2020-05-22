@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { withRouter } from 'next/router';
 import styled, { css } from 'styled-components';
+import { useForm } from 'react-hook-form';
 import format from 'date-fns/format';
 import round from 'lodash/round';
 import useInterval from '../hooks/useInterval';
@@ -74,6 +75,7 @@ const HomePage = ({ router }) => {
     },
     user: {},
   });
+  const { register, reset, handleSubmit } = useForm();
   const { connected, orderBook, user } = info;
 
   useEffect(() => {
@@ -107,6 +109,18 @@ const HomePage = ({ router }) => {
         setInfo(data);
       });
   }, refreshSecond ? refreshSecond * 1000 : null);
+
+  const handleConfigSubmit = (data) => {
+    fetch(`${process.env.BOT_SERVER_HOST}/api/state/user/config`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+      .then(results => results.json())
+      .then(res => {
+        console.log('res', res);
+      });
+  };
 
   const balance = round(info.user.wallet?.funding.USD.balance || 0, 2);
   const balanceAvailable = round(info.user.wallet?.funding.USD.balanceAvailable || 0, 2);
@@ -151,6 +165,60 @@ const HomePage = ({ router }) => {
             <Td>{`${balanceAvailable} USD (${round(balanceAvailable * 30, 0)} TWD)`}</Td>
           </tr>
         </tbody>
+      </Table>
+      <Divider />
+      <Table>
+        <caption>Bot Configuration</caption>
+        <thead>
+          <tr>
+            <Th></Th>
+            <Th alignRight>Current</Th>
+            <Th />
+            <Th>Edit</Th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <Th alignRight>At least keep amount</Th>
+            <Td>{user.config?.amountKeep}</Td>
+            <Td rowSpan={0}>
+              <button
+                onClick={() => {
+                  reset(user.config);
+                }}
+              >
+                Copy from current to edit
+                <br />
+                →→→→→→→→→→→→
+              </button>
+            </Td>
+            <Td><input name="amountKeep" type="number" ref={register} min={0} step={50} /></Td>
+          </tr>
+          <tr>
+            <Th alignRight>Min amount per order</Th>
+            <Td>{user.config?.amountMin}</Td>
+            <Td><input name="amountMin" type="number" ref={register} min={50} step={50} /></Td>
+          </tr>
+          <tr>
+            <Th alignRight>Max amount per order</Th>
+            <Td>{user.config?.amountMax}</Td>
+            <Td><input name="amountMax" type="number" ref={register} min={50} step={50} /></Td>
+          </tr>
+          <tr>
+            <Th alignRight>Fix offer rate</Th>
+            <Td>
+              {`${user.config?.fixedOfferRate} (${user.config?.fixedOfferRate * 100}%)`}
+            </Td>
+            <Td><input name="fixedOfferRate" type="number" ref={register} /></Td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <Td alignRight colSpan={4}>
+              <button onClick={handleSubmit(handleConfigSubmit)}>Apply</button>
+            </Td>
+          </tr>
+        </tfoot>
       </Table>
       <Divider />
       <Table>
@@ -214,9 +282,9 @@ const HomePage = ({ router }) => {
         </tbody>
         <tfoot>
           <tr>
-            <Th>Daily Earning</Th>
+            <Th>Daily Earning (After 15% fee)</Th>
             <Td colSpan={8}>
-              {`${round(dailyEarning, 2).toFixed(2)} USD (${round(dailyEarning * 30, 0)} TWD)`}
+              {`${round(dailyEarning * 0.85, 2).toFixed(2)} USD (${round(dailyEarning * 0.85 * 30, 0)} TWD)`}
             </Td>
           </tr>
         </tfoot>

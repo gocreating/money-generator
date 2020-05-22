@@ -1,5 +1,5 @@
 const { createBFXPublicWS, createBFXAuthWS, createBFXRest, initialize } = require('./bfxController');
-const { getState } = require('./state');
+const { getState, setInState } = require('./state');
 
 module.exports = (app) => {
   let rest;
@@ -34,5 +34,10 @@ module.exports = (app) => {
       console.log(error);
       res.json({ status: 'error', error });
     }
+  });
+
+  app.patch('/api/state/user/config', (req, res) => {
+    setInState(['user', 'config'], req.body);
+    res.json({ status: 'ok' });
   });
 };

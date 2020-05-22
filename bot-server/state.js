@@ -12,7 +12,7 @@ const state = {
       amountKeep: 160,
       amountMin: 250,
       amountMax: 300,
-      fixedOfferRate: 0.000979, // 0.099999% per day
+      fixedOfferRate: 0,
     },
     info: {},
     wallet: {
