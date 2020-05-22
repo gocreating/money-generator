@@ -1,6 +1,6 @@
 const BFX = require('bitfinex-api-node');
 const { WSv2, RESTv2 } = require('bitfinex-api-node');
-const { UserInfo, FundingOffer, FundingCredit, Wallet } = require('bfx-api-node-models');
+const { FundingCredit, FundingOffer, LedgerEntry, UserInfo, Wallet } = require('bfx-api-node-models');
 const round = require('lodash/round');
 const padStart = require('lodash/padStart');
 const { getState, setState, setInState } = require('./state');
@@ -124,6 +124,24 @@ const updateFundingTrade = async (ftArray, rest) => {
   }
 };
 
+const updateUserLedgers = async (rest) => {
+  const START = Date.now() - (30 * 24 * 60 * 60 * 1000);
+  const END = Date.now();
+  const LIMIT = 25;
+
+  try {
+    const ledgersIn30Days = await rest.ledgers({
+      ccy: 'USD',
+      category: 28, // margin / swap / interest payment, see https://docs.bitfinex.com/reference#rest-auth-ledgers
+    }, START, END, LIMIT);
+    const userLedgers = ledgersIn30Days.map(leArray => LedgerEntry.unserialize(leArray));
+    setInState(['user', 'ledgers'], userLedgers);
+    console.log('[BFX] ledgers fetched');
+  } catch (e) {
+    console.log(e);
+  }
+};
+
 const initialize = async (ws, authWS, rest) => {
   await ws.open();
   await authWS.open();
@@ -147,22 +165,6 @@ const initialize = async (ws, authWS, rest) => {
   // 新的出價掛單
   authWS.onFundingOfferNew({}, (fon) => {
     updateUserFundingOffer(fon);
-
-    // const intervalId = setInterval(() => {
-    //   console.log(`${fo.id},${fo.symbol},${fo.status},${fo.amount},${fo.amountOrig},${fo.rate},${fo.period},${fo.renew}`);
-    // }, 1000);
-
-    // if (fo.amount === 50) {
-    //   setTimeout(async () => {
-    //     console.log('==== canceling ====');
-    //     const resOffer = await rest.cancelFundingOffer(fo.id);
-    //     if (resOffer.status === 'SUCCESS') {
-    //       const resFo = FundingOffer.unserialize(resOffer.notifyInfo);
-    //       console.log(`Offer ${resFo.id} cancelled`);
-    //     }
-    //     clearInterval(intervalId);
-    //   }, 5000);
-    // }
   });
 
   authWS.onFundingOfferUpdate({}, (fou) => {
@@ -189,9 +191,16 @@ const initialize = async (ws, authWS, rest) => {
     updateFundingTrade(ftu, rest);
   });
 
+  // refresh ledgers every 10 minutes after initial fetch
+  await updateUserLedgers(rest);
+  setInterval(() => {
+    updateUserLedgers(rest);
+  }, 10 * 3600 * 1000);
+
   try {
     const userInfo = await rest.userInfo();
     setInState(['user', 'info'], UserInfo.unserialize(userInfo));
+    console.log('[BFX] user info fetched');
   } catch (e) {
     console.error('Fail to initialize.', e);
   }

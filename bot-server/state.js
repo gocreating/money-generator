@@ -25,6 +25,7 @@ const state = {
     },
     fundingCreditMap: {},
     fundingOfferMap: {},
+    ledgers: [],
   },
 };
 

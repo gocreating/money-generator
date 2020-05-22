@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { withRouter } from 'next/router';
 import styled, { css } from 'styled-components';
+import format from 'date-fns/format';
 import round from 'lodash/round';
 import useInterval from '../hooks/useInterval';
 
@@ -118,6 +119,8 @@ const HomePage = ({ router }) => {
     const fc = info.user.fundingCreditMap[offerId];
     return sum + fc.amount * fc.rate;
   }, 0);
+  const fundingEarnings = (info.user.ledgers || []).reduce((sum, ledger) => sum + ledger.amount, 0);
+
   return (
     <div>
       <Table>
@@ -334,6 +337,40 @@ const HomePage = ({ router }) => {
       </Table>
       <Divider />
       <Table>
+        <caption>Funding Earnings in recent 30 Days</caption>
+        <thead>
+          <tr>
+            <Th>ID</Th>
+            <Th>Description</Th>
+            <Th>Currency</Th>
+            <Th>Amount</Th>
+            <Th>Balance</Th>
+            <Th>Date</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {(info.user.ledgers || []).map(ledger => (
+            <tr key={ledger.id}>
+              <Td>{ledger.id}</Td>
+              <Td>{ledger.description}</Td>
+              <Td>{ledger.currency}</Td>
+              <Td>{ledger.amount}</Td>
+              <Td>{ledger.balance}</Td>
+              <Td>{format(ledger.mts, 'yyyy/MM/dd HH:mm:ss')}</Td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <Th>Total</Th>
+            <Td colSpan={5}>
+              {`${round(fundingEarnings, 2).toFixed(2)} USD (${round(fundingEarnings * 30, 0)} TWD)`}
+            </Td>
+          </tr>
+        </tfoot>
+      </Table>
+      <Divider />
+      <Table>
         <caption>Monitor Dashboard</caption>
         <tbody>
           <tr>
@@ -344,6 +381,12 @@ const HomePage = ({ router }) => {
             <Th alignRight>Refresh Interval</Th>
             <Td>
               {refreshSecond ? `Every ${refreshSecond} seconds` : 'waiting...'}
+            </Td>
+          </tr>
+          <tr>
+            <Th alignRight>Funding Earnings Refresh Interval</Th>
+            <Td>
+              {'Every 10 minutes'}
             </Td>
           </tr>
           <tr>
