@@ -294,11 +294,11 @@ const initialize = async (ws, authWS, rest) => {
     updateFundingTrade(ftu, rest);
   });
 
-  // refresh ledgers every 10 minutes after initial fetch
+  // refresh ledgers every 20 minutes after initial fetch
   await updateUserLedgers(rest);
   setInterval(() => {
     updateUserLedgers(rest);
-  }, 10 * 3600 * 1000);
+  }, 20 * 60 * 1000);
 
   registerCleanUpHandler(ws, authWS);
 

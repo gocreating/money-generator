@@ -487,7 +487,7 @@ const HomePage = ({ router }) => {
           <tr>
             <Th alignRight>Funding Earnings Refresh Interval</Th>
             <Td>
-              {'Every 10 minutes'}
+              {'Every 20 minutes'}
             </Td>
           </tr>
           <tr>
