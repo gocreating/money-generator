@@ -1,0 +1,22 @@
+version: '3'
+services:
+  bot-server:
+    build: .
+    ports:
+      # external port: internal port
+      - "7000:7000"
+    environment:
+      - NODE_ENV=production
+    entrypoint: yarn
+    command: "start-bot"
+  portal-server:
+    build: .
+    ports:
+      # external port: internal port
+      - "3000:3000"
+    volumes:
+      - ./next.config.prod.js:/srv/next.config.prod
+    environment:
+      - NODE_ENV=production
+    entrypoint: yarn
+    command: "start"

@@ -1,25 +1,43 @@
 # Money Generator
 
-``` bash
-yarn
-```
-
-## Server
+## Deploy
 
 ``` bash
-# nodemon bot-server
-yarn start-bot
+docker-compose -f docker-compose-prod.yaml up
 ```
 
-## Dashboard
+## Develop
 
-``` bash
-# yarn dev
-yarn build
-yarn start
-```
+1. Install dependencies
 
-Open `http://localhost:3000/?BITFINEX_API_KEY=xxx&BITFINEX_API_SECRET=xxx`
+    ``` bash
+    yarn
+    ```
+
+2. Launch bot server
+
+    ``` bash
+    # for develop
+    nodemon bot-server
+
+    # for production
+    yarn start-bot
+    ```
+
+3. Launch portal server
+
+    ``` bash
+    # for develop
+    yarn dev
+
+    # for production
+    yarn build
+    yarn start
+    ```
+
+4. Open portal in browser
+
+    `http://localhost:3000/?BITFINEX_API_KEY=xxx&BITFINEX_API_SECRET=xxx`
 
 ## Description
 
