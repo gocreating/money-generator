@@ -212,7 +212,11 @@ const HomePage = ({ router }) => {
             <Td><input name="amountMax" type="number" ref={register} min={50} step={50} /></Td>
           </tr>
           <tr>
-            <Th alignRight>Fix offer rate</Th>
+            <Th alignRight>
+              Fix daily offer rate
+              <br />
+              {'(max: 0.07)'}
+            </Th>
             <Td>
               {
                 user.config?.enableFixedOfferRate
@@ -224,12 +228,16 @@ const HomePage = ({ router }) => {
               <input id="enableFixedOfferRate" name="enableFixedOfferRate" type="checkbox" ref={register} />
               <label htmlFor="enableFixedOfferRate">Enable</label>
               <br />
-              <input name="fixedOfferRate" type="number" ref={register} min={0.0} step={0.00001} />
-              {`${round(watchedFixedOfferRate * 100, 5).toFixed(5)}%`}
+              <input name="fixedOfferRate" type="number" ref={register} min={0.0} max={0.07} step={0.00001} />
+              {`(${round(watchedFixedOfferRate * 100, 5).toFixed(5)}%)`}
             </Td>
           </tr>
           <tr>
-            <Th alignRight>Fix offer period (days)</Th>
+            <Th alignRight>
+              Fix offer period (days)
+              <br />
+              {'(min: 2 days, max: 30 days)'}
+            </Th>
             <Td>
               {
                 user.config?.enableFixedOfferPeriod
