@@ -2,6 +2,8 @@ const {
   createBFXPublicWS,
   createBFXAuthWS,
   createBFXRest,
+  tryToCloseWS,
+  tryToCloseAuthWS,
   initialize,
   autoOffer,
 } = require('./bfxController');
@@ -16,14 +18,12 @@ module.exports = (app) => {
 
   app.get('/api/connect', async (req, res) => {
     const { BITFINEX_API_KEY, BITFINEX_API_SECRET } = req.query;
-    rest = createBFXRest(BITFINEX_API_KEY, BITFINEX_API_SECRET);
-    const ws = createBFXPublicWS();
-    const authWS = createBFXAuthWS(BITFINEX_API_KEY, BITFINEX_API_SECRET);
-
     try {
-      await initialize(ws, authWS, rest);
+      const bfx = await initialize(BITFINEX_API_KEY, BITFINEX_API_SECRET);
+      rest = bfx.rest;
       res.json({ status: 'ok' });
     } catch (e) {
+      console.log('[Routes] Connect error', e);
       res.json({ status: 'error', e });
     }
   });

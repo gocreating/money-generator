@@ -115,8 +115,14 @@ const autoOffer = async () => {
   try {
     const foRes = await rest.submitFundingOffer(newFo);
     const fo = FundingOffer.unserialize(foRes.notifyInfo);
-    console.log('[BFX] Auto offer:');
-    console.log(fo);
+    console.log('[BFX] Auto create offer:', fo.id);
+    setTimeout(async () => {
+      const state = getState();
+      if (state.user.fundingOfferMap[fo.id]) {
+        const resOffer = await rest.cancelFundingOffer(parseInt(fo.id));
+        console.log(`[BFX] Auto cancel offer: ${fo.id} (${config.refreshOfferWhenNotMatchedInSecond} seconds timeout)`);
+      }
+    }, config.refreshOfferWhenNotMatchedInSecond * 1000);
   } catch (e) {
     console.log(e);
   }
@@ -146,7 +152,14 @@ const removeUserFundingOffer = (foArray) => {
   setInState(['user', 'fundingOfferMap', fo.id], undefined);
 };
 
-const updateFundingTrade = async (ftArray, rest) => {
+const removeClosedFundingCredit = (fccArray) => {
+  const fc = FundingCredit.unserialize(fccArray);
+  setInState(['user', 'fundingCreditMap', fc.id], undefined);
+};
+
+const updateFundingCredits = async () => {
+  console.log('[BFX] updateFundingCredits');
+
   // 成交時不會有 funding snapshot，要手動更新 funding credits
   try {
     const fcs = await rest.fundingCredits('fUSD');
@@ -170,17 +183,17 @@ const updateUserLedgers = async (rest) => {
     }, START, END, LIMIT);
     const userLedgers = ledgersIn30Days.map(leArray => LedgerEntry.unserialize(leArray));
     setInState(['user', 'ledgers'], userLedgers);
-    console.log('[BFX] ledgers fetched');
+    console.log('[BFX] Ledgers fetched');
   } catch (e) {
     console.log(e);
   }
 };
 
 const tryToCloseWS = async () => {
-  if (ws !== null) {
+  if (ws !== null && ws.isOpened) {
     try {
       await ws.close();
-      ws = null;
+      console.log('[BFX] WS closed');
     } catch (e) {
       console.log(e);
     }
@@ -188,10 +201,10 @@ const tryToCloseWS = async () => {
 };
 
 const tryToCloseAuthWS = async () => {
-  if (authWS !== null) {
+  if (authWS !== null && authWS.isOpened) {
     try {
       await authWS.close();
-      authWS = null;
+      console.log('[BFX] AuthWS closed');
     } catch (e) {
       console.log(e);
     }
@@ -237,17 +250,36 @@ const registerCleanUpHandler = () => {
   cleanUpHandlerRegistered = true;
 };
 
-const initialize = async (ws, authWS, rest) => {
-  try {
-    const userInfo = await rest.userInfo();
-    setInState(['user', 'info'], UserInfo.unserialize(userInfo));
-    console.log('[BFX] user info fetched');
-  } catch (e) {
-    console.error('Fail to initialize.', e);
-  }
+// FIXME: 防止重複註冊WS listener
+// 檢測方式: 撤單使餘額增加，觸發bot -> 檢查是否同時掛2張以上一樣的單
+// 暫時已修復，需觀察一段時間
+const initialize = async (apiKey, apiSecret) => {
+  // clean up existing connections
+  tryToCloseWS();
+  tryToCloseAuthWS();
+
+  // create new connections
+  rest = createBFXRest(apiKey, apiSecret);
+  ws = createBFXPublicWS();
+  authWS = createBFXAuthWS(apiKey, apiSecret);
 
   await ws.open();
   await authWS.open();
+
+  ws.isOpened = true;
+  authWS.isOpened = true;
+
+  /*
+   * Setup handlers
+   */
+
+  try {
+    const userInfo = await rest.userInfo();
+    setInState(['user', 'info'], UserInfo.unserialize(userInfo));
+    console.log('[BFX] User info fetched');
+  } catch (e) {
+    console.error('Fail to initialize.', e);
+  }
 
   authWS.onWalletSnapshot({}, (wallets) => {
     wallets.forEach(wallet => updateUserWallet(wallet, rest));
@@ -287,11 +319,19 @@ const initialize = async (ws, authWS, rest) => {
   });
 
   authWS.onFundingCreditUpdate({}, (fcu) => {
+    console.log('[BFX] onFundingCreditUpdate');
+    console.log(fcu);
     updateUserFundingCredit(fcu);
   });
 
+  authWS.onFundingCreditClose({}, (fcc) => {
+    console.log('[BFX] onFundingCreditClose');
+    console.log(fcc);
+    removeClosedFundingCredit(fcc);
+  });
+
   authWS.onFundingTradeUpdate({}, (ftu) => {
-    updateFundingTrade(ftu, rest);
+    updateFundingCredits();
   });
 
   // refresh ledgers every 20 minutes after initial fetch
@@ -303,12 +343,16 @@ const initialize = async (ws, authWS, rest) => {
   registerCleanUpHandler(ws, authWS);
 
   setState('connected', true);
+
+  return { rest, ws, authWS };
 };
 
 module.exports = {
   createBFXPublicWS,
   createBFXAuthWS,
   createBFXRest,
+  tryToCloseWS,
+  tryToCloseAuthWS,
   initialize,
   autoOffer,
 };

@@ -252,6 +252,17 @@ const HomePage = ({ router }) => {
               <input name="fixedOfferPeriod" type="number" ref={register} min={2} max={30} />
             </Td>
           </tr>
+          <tr>
+            <Th alignRight>
+              Refresh offer when not matched (seconds)
+              <br />
+              {'(min: 30 seconds)'}
+            </Th>
+            <Td>{`Every ${user.config?.refreshOfferWhenNotMatchedInSecond} seconds`}</Td>
+            <Td>
+              <input name="refreshOfferWhenNotMatchedInSecond" type="number" ref={register} min={30} />
+            </Td>
+          </tr>
         </tbody>
         <tfoot>
           <tr>
