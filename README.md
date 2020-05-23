@@ -1,6 +1,9 @@
 # Money Generator
 
 Money generator is a semiautomatic bot to offer fundings on Bitfinex.
+Two components are included: `bot-server` and `portal-server`.
+Bot server will automatically create offers according to current market stats and your bot config.
+Portal server provides a dashboard of monitors, reports and configuration to bot-server.
 
 ![](./images/screen-shot.png)
 
