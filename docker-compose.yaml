@@ -1,0 +1,8 @@
+version: '3'
+services:
+  money-generator:
+    build: .
+    ports:
+      # external port: internal port
+      - "7000:7000"
+      - "3000:3000"

@@ -31,7 +31,7 @@ Portal server provides a dashboard of monitors, reports and configuration to bot
 ## Deploy
 
 ``` bash
-docker-compose -f docker-compose-prod.yaml up
+docker-compose up --build
 ```
 
 Open portal in browser: `http://your-deploy-host:3000/?BITFINEX_API_KEY=<your-api-key>&BITFINEX_API_SECRET=<your-api-secret>`
