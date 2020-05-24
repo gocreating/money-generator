@@ -4,8 +4,6 @@ jobs:
     docker:
       - image: google/cloud-sdk
     steps:
-      - attach_workspace:
-          at: ./my-persist-workspace
       - checkout
       - setup_remote_docker
       - run:
