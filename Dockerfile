@@ -10,6 +10,9 @@ RUN apk update && \
 
 COPY . /srv/money-generator
 
+RUN rm next.config.js && \
+    mv next.config.prod.js next.config.js
+
 RUN yarn build
 
 EXPOSE 3000
