@@ -1,0 +1,34 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: google/cloud-sdk
+    steps:
+      - attach_workspace:
+          at: ./my-persist-workspace
+      - persist_to_workspace:
+          root: ./my-persist-workspace
+          paths:
+            - persist-env-var.txt
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Setup Environment Variable
+          command: |
+            TAG=release-$(echo $CIRCLE_SHA1 | cut -c 1-8)-$CIRCLE_BUILD_NUM
+            mkdir -p ./my-persist-workspace
+            touch ./my-persist-workspace/persist-env-var.txt
+            echo "export IMAGE_TAG=$TAG" > ./my-persist-workspace/persist-env-var.txt
+            cat ./my-persist-workspace/persist-env-var.txt >> $BASH_ENV
+      - run:
+          name: Build Docker Image
+          command: |
+            IMAGE_TAG=release-$(echo $CIRCLE_SHA1 | cut -c 1-8)-$CIRCLE_BUILD_NUM
+            docker build \
+              -t gocreating/money-generator:${IMAGE_TAG} \
+              -f ./Dockerfile .
+      - run:
+          name: Push Docker Image
+          command: |
+            docker login -u $DOCKER_USER -p $DOCKER_PASS
+            docker push gocreating/money-generator:$IMAGE_TAG
