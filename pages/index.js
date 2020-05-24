@@ -140,7 +140,7 @@ const HomePage = ({ router }) => {
   return (
     <NoSsr>
       <Table>
-        <caption>Account</caption>
+        <caption>Account Beta</caption>
         <tbody>
           <tr>
             <Th alignRight>ID</Th>
@@ -522,7 +522,7 @@ const HomePage = ({ router }) => {
         </tbody>
       </Table>
     </NoSsr>
-  )
+  );
 };
 
 export default withRouter(HomePage);
