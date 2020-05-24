@@ -309,6 +309,8 @@ const initialize = async (apiKey, apiSecret) => {
 
   // Offer 取消/更新/成交時觸發
   authWS.onFundingOfferClose({}, (foc) => {
+    const fo = FundingOffer.unserialize(foc);
+    console.log('[BFX] Offer closed', fo.id);
     removeUserFundingOffer(foc);
   });
 
@@ -321,8 +323,6 @@ const initialize = async (apiKey, apiSecret) => {
   });
 
   authWS.onFundingCreditUpdate({}, (fcu) => {
-    console.log('[BFX] onFundingCreditUpdate');
-    console.log(fcu);
     updateUserFundingCredit(fcu);
   });
 

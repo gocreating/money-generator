@@ -52,6 +52,7 @@ module.exports = (app) => {
       fixedOfferPeriod: parseInt(req.body.fixedOfferPeriod),
     };
     setInState(['user', 'config'], userConfig);
+    console.log('[Routes] Bot config updated');
     // trigger bot when config is updated
     autoOffer();
     res.json({ status: 'ok' });
