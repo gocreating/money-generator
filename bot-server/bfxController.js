@@ -291,6 +291,7 @@ const initialize = async (apiKey, apiSecret) => {
 
   // 出價
   authWS.onFundingOfferSnapshot({}, (fos) => {
+    setInState(['user', 'fundingOfferMap'], {});
     fos.forEach(foSerialized => {
       const fo = FundingOffer.unserialize(foSerialized);
       updateUserFundingOffer(fo);
@@ -313,6 +314,7 @@ const initialize = async (apiKey, apiSecret) => {
 
   // 已提供
   authWS.onFundingCreditSnapshot({}, (fcs) => {
+    setInState(['user', 'fundingCreditMap'], {});
     fcs.forEach(fcArray => {
       updateUserFundingCredit(fcArray);
     });
