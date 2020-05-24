@@ -140,7 +140,7 @@ const HomePage = ({ router }) => {
   return (
     <NoSsr>
       <Table>
-        <caption>Account Beta</caption>
+        <caption>Account</caption>
         <tbody>
           <tr>
             <Th alignRight>ID</Th>
