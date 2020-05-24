@@ -3,6 +3,9 @@ jobs:
   build:
     docker:
       - image: google/cloud-sdk
+    environment:
+      GOOGLE_PROJECT_ID: "cubee-259905"
+      GOOGLE_COMPUTE_ZONE: "asia-east1-a"
     steps:
       - checkout
       - setup_remote_docker
@@ -26,7 +29,19 @@ jobs:
           name: Push Docker Image
           command: |
             docker login -u $DOCKER_USER -p $DOCKER_PASS
-            docker push gocreating/money-generator:$IMAGE_TAG
+            docker push gocreating/money-generator:latest
+      - run:
+          name: Setup Google Cloud SDK
+          command: |
+            echo $GCLOUD_SERVICE_KEY > ./gcloud-service-key.json
+            gcloud auth activate-service-account --key-file=./gcloud-service-key.json
+            gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+            gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+            rm ./gcloud-service-key.json
+      - run:
+          name: Deploy to Production
+          command: |
+            gcloud compute instances reset money-generator-prod
       - persist_to_workspace:
           root: ./my-persist-workspace
           paths:
