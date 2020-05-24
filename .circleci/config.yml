@@ -6,10 +6,6 @@ jobs:
     steps:
       - attach_workspace:
           at: ./my-persist-workspace
-      - persist_to_workspace:
-          root: ./my-persist-workspace
-          paths:
-            - persist-env-var.txt
       - checkout
       - setup_remote_docker
       - run:
@@ -32,3 +28,7 @@ jobs:
           command: |
             docker login -u $DOCKER_USER -p $DOCKER_PASS
             docker push gocreating/money-generator:$IMAGE_TAG
+      - persist_to_workspace:
+          root: ./my-persist-workspace
+          paths:
+            - persist-env-var.txt
