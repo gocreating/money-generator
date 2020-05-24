@@ -77,7 +77,7 @@ const HomePage = ({ router }) => {
     user: {},
   });
   const { register, watch, reset, handleSubmit } = useForm();
-  const { connected, orderBook, user } = info;
+  const { imageTag, connected, orderBook, user } = info;
   const watchedFixedOfferRate = watch('fixedOfferRate');
 
   useEffect(() => {
@@ -495,6 +495,10 @@ const HomePage = ({ router }) => {
       <Table>
         <caption>Monitor Dashboard</caption>
         <tbody>
+          <tr>
+            <Th alignRight>Money Generator Image Tag</Th>
+            <Td>{imageTag ? imageTag : '(dev)'}</Td>
+          </tr>
           <tr>
             <Th alignRight>Bitfinex API Connection Status</Th>
             <Td>{status}</Td>

@@ -1,4 +1,5 @@
 const state = {
+  imageTag: process.env.imageTag,
   connected: false,
   orderBook: {
     bids: [],

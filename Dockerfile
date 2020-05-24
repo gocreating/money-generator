@@ -18,6 +18,9 @@ RUN yarn build
 EXPOSE 3000
 EXPOSE 7000
 
-ENV NODE_ENV=production
+ARG IMAGE_TAG
+
+ENV NODE_ENV=production \
+    imageTag=${IMAGE_TAG}
 
 ENTRYPOINT ["sh", "/srv/money-generator/docker-entrypoint.sh"]
