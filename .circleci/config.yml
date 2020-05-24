@@ -41,7 +41,7 @@ jobs:
       - run:
           name: Deploy to Production
           command: |
-            gcloud compute instances reset money-generator-prod --zone ${GOOGLE_COMPUTE_ZONE}
+            gcloud compute instance-groups managed rolling-action restart money-generator-prod-group --zone ${GOOGLE_COMPUTE_ZONE}
       - persist_to_workspace:
           root: ./my-persist-workspace
           paths:
