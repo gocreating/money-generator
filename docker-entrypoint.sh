@@ -1,4 +1,4 @@
 #!/bin/bash
 
-yarn start-bot &
-yarn start
+yarn start &
+yarn start-bot
