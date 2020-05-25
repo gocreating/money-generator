@@ -9,6 +9,7 @@ let cleanUpHandlerRegistered = false;
 let ws = null
 let authWS = null;
 let rest = null;
+let ledgerIntervalId = null;
 
 const createBFXPublicWS = () => {
   console.log('[BFX] Create Public Websocket');
@@ -338,7 +339,10 @@ const initialize = async (apiKey, apiSecret) => {
 
   // refresh ledgers every 20 minutes after initial fetch
   await updateUserLedgers(rest);
-  setInterval(() => {
+  if (ledgerIntervalId) {
+    clearInterval(ledgerIntervalId);
+  }
+  ledgerIntervalId = setInterval(() => {
     updateUserLedgers(rest);
   }, 20 * 60 * 1000);
 
