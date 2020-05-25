@@ -44,7 +44,9 @@ jobs:
           command: |
             # gcloud compute instance-groups managed rolling-action restart money-generator-prod-group --zone ${GOOGLE_COMPUTE_ZONE}
             # INSTANCE_NAME = $(gcloud compute instance-groups list-instances money-generator-prod-group --zone asia-east1-a | awk 'FNR==2' | awk '{print $1;}')
-            gcloud beta compute instances update-container money-generator-prod --container-image=docker.io/gocreating/money-generator:${IMAGE_TAG} --zone asia-east1-a
+            gcloud compute instances stop money-generator-prod --zone ${GOOGLE_COMPUTE_ZONE}
+            gcloud beta compute instances update-container money-generator-prod --container-image=docker.io/gocreating/money-generator:${IMAGE_TAG} --zone ${GOOGLE_COMPUTE_ZONE}
+            gcloud compute instances start money-generator-prod --zone ${GOOGLE_COMPUTE_ZONE}
       - persist_to_workspace:
           root: ./my-persist-workspace
           paths:
