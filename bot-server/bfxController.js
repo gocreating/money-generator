@@ -332,7 +332,7 @@ const initialize = async (apiKey, apiSecret) => {
 
   authWS.onFundingCreditClose({}, (fcc) => {
     console.log('[BFX] onFundingCreditClose');
-    const fc = FundingCredit.unserialize(fccArray);
+    const fc = FundingCredit.unserialize(fcc);
     console.log(fc);
     removeClosedFundingCredit(fcc);
   });
