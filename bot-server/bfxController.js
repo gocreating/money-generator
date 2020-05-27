@@ -91,6 +91,9 @@ const autoOffer = async () => {
 
   const offerableBalance = wallet.funding.USD.balanceAvailable - config.amountKeep;
   let offerRate;
+  if (config.minOfferRate > state.infer.bestAskRate) {
+    offerRate = config.minOfferRate;
+  }
   if (config.enableFixedOfferRate) {
     offerRate = config.fixedOfferRate;
   }

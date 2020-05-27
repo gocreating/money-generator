@@ -111,8 +111,19 @@ const HomePage = ({ router }) => {
       });
   }, refreshSecond ? refreshSecond * 1000 : null);
 
+  const handleEditButtonClick = () => {
+    const dailyMinOfferRate = user.config.minOfferRate;
+    const dailyFixedOfferRate = user.config.fixedOfferRate;
+    reset({
+      ...user.config,
+      minOfferRate: dailyMinOfferRate ? dailyMinOfferRate * 365 * 100 : undefined,
+      fixedOfferRate: dailyFixedOfferRate ? dailyFixedOfferRate * 365 * 100 : undefined,
+    });
+  };
+
   const handleConfigSubmit = (data) => {
     // convert annualized percentage to daily rate
+    data.minOfferRate = (data.minOfferRate / 365) / 100;
     data.fixedOfferRate = (data.fixedOfferRate / 365) / 100;
     fetch(`${process.env.BOT_SERVER_HOST}/api/state/user/config`, {
       method: 'PATCH',
@@ -177,15 +188,7 @@ const HomePage = ({ router }) => {
             <Th></Th>
             <Th alignRight>Current</Th>
             <Th>
-              <button
-                onClick={() => {
-                  const dailyRate = user.config.fixedOfferRate;
-                  reset({
-                    ...user.config,
-                    fixedOfferRate: dailyRate ? dailyRate * 365 * 100 : undefined,
-                  });
-                }}
-              >
+              <button onClick={handleEditButtonClick}>
                 Edit from current value
               </button>
             </Th>
@@ -217,6 +220,14 @@ const HomePage = ({ router }) => {
             <Td>{user.config?.amountMax}</Td>
             <Td><input name="amountMax" type="number" ref={register} min={50} step={50} /></Td>
             <Td>The maximum amount in an offer</Td>
+          </tr>
+          <tr>
+            <Th alignRight>Min offer rate p.a. (%)</Th>
+            <Td>
+              {`${user.config?.minOfferRate * 365 * 100}% p.a.`}
+            </Td>
+            <Td><input name="minOfferRate" type="number" ref={register} min={0} />%</Td>
+            <Td>The minimum rate to submit an offer</Td>
           </tr>
           <tr>
             <Th alignRight>

@@ -14,6 +14,7 @@ const state = {
       amountKeep: 105,
       amountMin: 50,
       amountMax: 300,
+      minOfferRate: 0.000273972602739726, // 10% p.a.
       enableFixedOfferRate: false,
       fixedOfferRate: null,
       enableFixedOfferPeriod: true,
