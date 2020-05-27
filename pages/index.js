@@ -76,9 +76,8 @@ const HomePage = ({ router }) => {
     },
     user: {},
   });
-  const { register, watch, reset, handleSubmit } = useForm();
+  const { register, reset, handleSubmit } = useForm();
   const { imageTag, connected, orderBook, user } = info;
-  const watchedFixedOfferRate = watch('fixedOfferRate');
 
   useEffect(() => {
     if (!BITFINEX_API_KEY || !BITFINEX_API_SECRET) {
@@ -113,6 +112,8 @@ const HomePage = ({ router }) => {
   }, refreshSecond ? refreshSecond * 1000 : null);
 
   const handleConfigSubmit = (data) => {
+    // convert annualized percentage to daily rate
+    data.fixedOfferRate = (data.fixedOfferRate / 365) / 100;
     fetch(`${process.env.BOT_SERVER_HOST}/api/state/user/config`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -175,18 +176,20 @@ const HomePage = ({ router }) => {
           <tr>
             <Th></Th>
             <Th alignRight>Current</Th>
-            <Td rowSpan={0}>
+            <Th>
               <button
                 onClick={() => {
-                  reset(user.config);
+                  const dailyRate = user.config.fixedOfferRate;
+                  reset({
+                    ...user.config,
+                    fixedOfferRate: dailyRate ? dailyRate * 365 * 100 : undefined,
+                  });
                 }}
               >
-                Copy from current to edit
-                <br />
-                →→→→→→→→→→→→
+                Edit from current value
               </button>
-            </Td>
-            <Th>Edit</Th>
+            </Th>
+            <Th>Description</Th>
           </tr>
           <tr>
             <Th alignRight>Enable Bot</Th>
@@ -195,48 +198,47 @@ const HomePage = ({ router }) => {
               <input id="enableBot" name="enableBot" type="checkbox" ref={register} />
               <label htmlFor="enableBot">Enable</label>
             </Td>
+            <Td>Enable the automatic offering bot</Td>
           </tr>
           <tr>
             <Th alignRight>At least keep amount (USD)</Th>
             <Td>{user.config?.amountKeep}</Td>
             <Td><input name="amountKeep" type="number" ref={register} min={0} step={50} /></Td>
+            <Td>The minimum amount you want to keep in your USD funding wallet</Td>
           </tr>
           <tr>
             <Th alignRight>Min amount per order (USD)</Th>
             <Td>{user.config?.amountMin}</Td>
             <Td><input name="amountMin" type="number" ref={register} min={50} step={50} /></Td>
+            <Td>The minimum amount in an offer</Td>
           </tr>
           <tr>
             <Th alignRight>Max amount per order (USD)</Th>
             <Td>{user.config?.amountMax}</Td>
             <Td><input name="amountMax" type="number" ref={register} min={50} step={50} /></Td>
+            <Td>The maximum amount in an offer</Td>
           </tr>
           <tr>
             <Th alignRight>
-              Fix daily offer rate
-              <br />
-              {'(max: 0.07)'}
+              Fix offer rate p.a. (%)
             </Th>
             <Td>
               {
                 user.config?.enableFixedOfferRate
-                ? `${user.config?.fixedOfferRate} (${user.config?.fixedOfferRate * 100}%)`
+                ? `${user.config?.fixedOfferRate * 365 * 100}% p.a.`
                 : 'Disabled'
               }
             </Td>
             <Td>
               <input id="enableFixedOfferRate" name="enableFixedOfferRate" type="checkbox" ref={register} />
               <label htmlFor="enableFixedOfferRate">Enable</label>
-              <br />
-              <input name="fixedOfferRate" type="number" ref={register} min={0.0} max={0.07} step={0.00001} />
-              {`(${round(watchedFixedOfferRate * 100, 5).toFixed(5)}%)`}
+              <input name="fixedOfferRate" type="number" ref={register} min={0.0} max={2555} step={0.2} />%
             </Td>
+            <Td>max: 7% per day</Td>
           </tr>
           <tr>
             <Th alignRight>
               Fix offer period (days)
-              <br />
-              {'(min: 2 days, max: 30 days)'}
             </Th>
             <Td>
               {
@@ -248,29 +250,41 @@ const HomePage = ({ router }) => {
             <Td>
               <input id="enableFixedOfferPeriod" name="enableFixedOfferPeriod" type="checkbox" ref={register} />
               <label htmlFor="enableFixedOfferPeriod">Enable</label>
-              <br />
-              <input name="fixedOfferPeriod" type="number" ref={register} min={2} max={30} />
+              <input name="fixedOfferPeriod" type="number" ref={register} min={2} max={30} />days
             </Td>
+            <Td>min: 2 days, max: 30 days</Td>
           </tr>
           <tr>
             <Th alignRight>
               Refresh offer when not matched (seconds)
-              <br />
-              {'(min: 30 seconds)'}
             </Th>
             <Td>{`Every ${user.config?.refreshOfferWhenNotMatchedInSecond} seconds`}</Td>
             <Td>
               <input name="refreshOfferWhenNotMatchedInSecond" type="number" ref={register} min={30} />
             </Td>
+            <Td>min: 30 seconds</Td>
           </tr>
         </tbody>
         <tfoot>
           <tr>
-            <Td alignRight colSpan={4}>
+            <Td alignRight colSpan={3}>
               <button onClick={handleSubmit(handleConfigSubmit)}>Apply</button>
             </Td>
+            <Td />
           </tr>
         </tfoot>
+      </Table>
+      <Divider />
+      <Table>
+        <caption>Infer</caption>
+        <tbody>
+          <tr>
+            <Th>Best Offer Rate</Th>
+            <Td>
+              {`${round(info.infer?.bestAskRate * 100, 5).toFixed(5)}% (${round(info.infer?.bestAskRate * 365 * 100, 1).toFixed(1)}% p.a.)`}
+            </Td>
+          </tr>
+        </tbody>
       </Table>
       <Divider />
       <Table>
@@ -294,7 +308,7 @@ const HomePage = ({ router }) => {
                 <Td>{fo.symbol}</Td>
                 <Td alignRight>{round(fo.amount, 2).toFixed(2)}</Td>
                 <Td alignRight>
-                  {`${round(fo.rate * 100, 5).toFixed(5)}% (${round(fo.rate * 365 * 100, 1).toFixed(1)}% annualized)`}
+                  {`${round(fo.rate * 100, 5).toFixed(5)}% (${round(fo.rate * 365 * 100, 1).toFixed(1)}% p.a.)`}
                 </Td>
                 <Td>{`${fo.period} days`}</Td>
                 <Td>
@@ -317,6 +331,65 @@ const HomePage = ({ router }) => {
       </Table>
       <Divider />
       <Table>
+        <caption>{'Order Book'}</caption>
+        <thead>
+          <tr>
+            <Th colSpan={4}>Bid</Th>
+            <Th colSpan={4}>Ask</Th>
+          </tr>
+          <tr>
+            <Td>ID</Td>
+            <Td alignRight>Period</Td>
+            <Td alignRight>Amount</Td>
+            <Td alignRight>Rate</Td>
+
+            <Td>Rate</Td>
+            <Td>Amount</Td>
+            <Td alignRight>Period</Td>
+            <Td>ID</Td>
+          </tr>
+        </thead>
+        <tbody>
+          {orderBook.bids.map((bid, i) => {
+            const ask = orderBook.asks[i];
+            accBidAmount -= bid[3];
+            accAskAmount += ask[3];
+
+            return (
+              <tr key={bid[0]}>
+                <Td>{bid[0]}</Td>
+                <Td alignRight>{bid[1]}</Td>
+                <Td alignRight>
+                  {round(-bid[3], 1).toFixed(1)}
+                </Td>
+                <Td alignRight>
+                  {i === 0 && `(${round(bid[2] * 365 * 100, 1)}% p.a.)`}
+                  {`${round(bid[2] * 100, 5).toFixed(5)}%`}
+                  <ColorBar
+                    percentage={accBidAmount / (totalBidAmount + totalAskAmount)}
+                    percentageRight
+                    green
+                  />
+                </Td>
+
+                <Td>
+                  {`${round(ask[2] * 100, 5).toFixed(5)}%`}
+                  {i === 0 && `(${round(ask[2] * 365 * 100, 1)}% p.a.)`}
+                  <ColorBar
+                    percentage={accAskAmount / (totalBidAmount + totalAskAmount)}
+                    red
+                  />
+                </Td>
+                <Td alignRight>{round(ask[3], 1).toFixed(1)}</Td>
+                <Td alignRight>{ask[1]}</Td>
+                <Td>{ask[0]}</Td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </Table>
+      <Divider />
+      <Table>
         <caption>{`Provided (${Object.keys(info.user.fundingCreditMap || []).length})`}</caption>
         <thead>
           <tr>
@@ -327,7 +400,7 @@ const HomePage = ({ router }) => {
             <Th>Type</Th>
             <Th alignRight>Amount</Th>
             <Th alignRight>Rate</Th>
-            <Th alignRight>Annualized Rate</Th>
+            <Th alignRight>Rate p.a.</Th>
             <Th alignRight>Period</Th>
             <Th alignRight>Expires in</Th>
           </tr>
@@ -388,77 +461,6 @@ const HomePage = ({ router }) => {
       </Table>
       <Divider />
       <Table>
-          <caption>Infer</caption>
-        <tbody>
-          <tr>
-            <Th>Best Offer Rate</Th>
-            <Td>
-              {`${round(info.infer?.bestAskRate * 100, 5).toFixed(5)}% (${round(info.infer?.bestAskRate * 365 * 100, 1).toFixed(1)}% annualized)`}
-            </Td>
-          </tr>
-        </tbody>
-      </Table>
-      <Divider />
-      <Table>
-        <caption>{'Order Book'}</caption>
-        <thead>
-          <tr>
-            <Th colSpan={4}>Bid</Th>
-            <Th colSpan={4}>Ask</Th>
-          </tr>
-          <tr>
-            <Td>ID</Td>
-            <Td alignRight>Period</Td>
-            <Td alignRight>Amount</Td>
-            <Td alignRight>Rate</Td>
-
-            <Td>Rate</Td>
-            <Td>Amount</Td>
-            <Td alignRight>Period</Td>
-            <Td>ID</Td>
-          </tr>
-        </thead>
-        <tbody>
-          {orderBook.bids.map((bid, i) => {
-            const ask = orderBook.asks[i];
-            accBidAmount -= bid[3];
-            accAskAmount += ask[3];
-
-            return (
-              <tr key={bid[0]}>
-                <Td>{bid[0]}</Td>
-                <Td alignRight>{bid[1]}</Td>
-                <Td alignRight>
-                  {round(-bid[3], 1).toFixed(1)}
-                </Td>
-                <Td alignRight>
-                  {i === 0 && `(${round(bid[2] * 365 * 100, 1)}% annualized)`}
-                  {`${round(bid[2] * 100, 5).toFixed(5)}%`}
-                  <ColorBar
-                    percentage={accBidAmount / (totalBidAmount + totalAskAmount)}
-                    percentageRight
-                    green
-                  />
-                </Td>
-
-                <Td>
-                  {`${round(ask[2] * 100, 5).toFixed(5)}%`}
-                  {i === 0 && `(${round(ask[2] * 365 * 100, 1)}% annualized)`}
-                  <ColorBar
-                    percentage={accAskAmount / (totalBidAmount + totalAskAmount)}
-                    red
-                  />
-                </Td>
-                <Td alignRight>{round(ask[3], 1).toFixed(1)}</Td>
-                <Td alignRight>{ask[1]}</Td>
-                <Td>{ask[0]}</Td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </Table>
-      <Divider />
-      <Table>
         <caption>Funding Earnings in recent 30 Days</caption>
         <thead>
           <tr>
@@ -497,7 +499,11 @@ const HomePage = ({ router }) => {
         <tbody>
           <tr>
             <Th alignRight>Money Generator Image Tag</Th>
-            <Td>{imageTag ? imageTag : '(dev)'}</Td>
+            <Td>
+              {imageTag
+                ? <a href={`https://hub.docker.com/layers/gocreating/money-generator/${imageTag}`} target="_blank">{imageTag}</a>
+                : '(dev)'}
+            </Td>
           </tr>
           <tr>
             <Th alignRight>Bitfinex API Connection Status</Th>
