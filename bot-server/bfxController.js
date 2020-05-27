@@ -1,6 +1,6 @@
 const BFX = require('bitfinex-api-node');
 const { WSv2, RESTv2 } = require('bitfinex-api-node');
-const { FundingCredit, FundingOffer, LedgerEntry, UserInfo, Wallet } = require('bfx-api-node-models');
+const { FundingCredit, FundingOffer, FundingTrade, LedgerEntry, UserInfo, Wallet } = require('bfx-api-node-models');
 const round = require('lodash/round');
 const padStart = require('lodash/padStart');
 const { getState, setState, setInState } = require('./state');
@@ -329,11 +329,19 @@ const initialize = async (apiKey, apiSecret) => {
 
   authWS.onFundingCreditClose({}, (fcc) => {
     console.log('[BFX] onFundingCreditClose');
-    console.log(fcc);
+    const fc = FundingCredit.unserialize(fccArray);
+    console.log(fc);
     removeClosedFundingCredit(fcc);
   });
 
   authWS.onFundingTradeUpdate({}, (ftu) => {
+    const ft = FundingTrade.unserialize(ftu);
+    console.log('[BFX] onFundingTradeUpdate');
+    console.log(ft);
+    console.log(`infer percentage = ${getState().infer.bestAskRate * 100}%, trade rate = ${ft.rate * 100}%`);
+    setTimeout(() => {
+      console.log(`infer percentage = ${getState().infer.bestAskRate * 100}%, trade rate = ${ft.rate * 100}% (2 seconds later)`);
+    }, 2000);
     updateFundingCredits();
   });
 
