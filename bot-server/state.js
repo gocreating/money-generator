@@ -11,7 +11,7 @@ const state = {
   user: {
     config: {
       enableBot: true,
-      amountKeep: 155,
+      amountKeep: 105,
       amountMin: 50,
       amountMax: 300,
       enableFixedOfferRate: false,
