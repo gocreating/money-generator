@@ -414,10 +414,10 @@ const HomePage = ({ router }) => {
             const expiringInHour = expiringInMinute / 60;
             const expiringInDay = expiringInHour / 24;
             let expStr = '';
-            if (expiringInSecond < 0) {
+            if (expiringInSecond <= 0) {
               expStr = `expired (under settlement)`;
             } else if (expiringInSecond < 60) {
-              expStr = `${Math.floor(expiringInSecond)} hours`;
+              expStr = `${Math.floor(expiringInSecond)} seconds`;
             } else if (expiringInMinute < 60) {
               expStr = `${Math.floor(expiringInMinute)} minutes`;
             } else if (expiringInHour < 48) {
